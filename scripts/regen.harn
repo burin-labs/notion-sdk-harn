@@ -1,0 +1,67 @@
+// regen — M1 entry point for the codegen smoke path.
+//
+// Reads the pinned Notion OpenAPI fixture, runs it through the
+// harn-openapi parser + codegen, and either writes the result to
+// `src/lib.harn` (when invoked with `--apply`) or prints a summary
+// diff against the current contents.
+//
+// Usage:
+//
+//   harn run scripts/regen.harn              # diff mode (read-only)
+//   harn run scripts/regen.harn -- --apply   # write mode
+//
+// The harn-openapi dependency is resolved via `[dependencies]` in
+// `harn.toml` (path = "../harn-openapi" until package management v0
+// lands, per harn#345). Run `harn install` once before first use.
+import { codegen_module, operations, parse } from "harn-openapi/default"
+
+let FIXTURE_PATH = "tests/fixtures/notion.openapi.json"
+
+let OUTPUT_PATH = "src/lib.harn"
+
+let CODEGEN_OPTIONS = {
+  module_name: "notion",
+  client_name: "NotionClient",
+  default_base_url: "https://api.notion.com",
+  header_overrides: {["Notion-Version"]: "2022-06-28"},
+}
+
+pipeline default() {
+  let apply_mode = argv.contains("--apply")
+  let raw = read_file(FIXTURE_PATH)
+  let doc = parse(raw)
+  let ops = operations(doc)
+  println("parsed ${doc.info.title} (OpenAPI ${doc.openapi})")
+  println("  operations: ${len(ops)}")
+  println("  schemas:    ${len(doc.components.schemas)}")
+  let generated = codegen_module(doc, CODEGEN_OPTIONS)
+  let generated_lines = len(split(generated, "\n"))
+  println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
+  let current = if file_exists(OUTPUT_PATH) {
+    read_file(OUTPUT_PATH)
+  } else {
+    ""
+  }
+  if apply_mode {
+    write_file(OUTPUT_PATH, generated)
+    println("wrote ${OUTPUT_PATH} (${len(generated)} bytes)")
+    if current == "" {
+      println("  (was empty)")
+    } else if current == generated {
+      println("  (no change)")
+    } else {
+      println("  (replaced ${len(current)} bytes -> ${len(generated)} bytes)")
+    }
+  } else if current == generated {
+    println("${OUTPUT_PATH} is up to date.")
+  } else if current == "" {
+    println("${OUTPUT_PATH} does not exist yet.")
+    println("Run `harn run scripts/regen.harn -- --apply` to write it.")
+  } else {
+    let current_lines = len(split(current, "\n"))
+    println("${OUTPUT_PATH} differs from generator output:")
+    println("  current:    ${len(current)} bytes, ${current_lines} lines")
+    println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
+    println("Run `harn run scripts/regen.harn -- --apply` to update it.")
+  }
+}
