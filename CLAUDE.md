@@ -17,15 +17,15 @@ management, and the v0 milestones.
 
 ## How to test
 
-Until `harn add` ships
-([harn#345](https://github.com/burin-labs/harn/issues/345)):
+Install the pinned Harn CLI from crates.io and run the local gate:
 
 ```sh
-cd /Users/ksinder/projects/harn
-cargo run --quiet --bin harn -- run /Users/ksinder/projects/notion-sdk-harn/tests/smoke.harn
-cargo run --quiet --bin harn -- check /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
-cargo run --quiet --bin harn -- lint  /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
-cargo run --quiet --bin harn -- fmt --check /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
+cargo install harn-cli --version "$(cat .harn-version)" --locked
+harn install
+harn check src scripts
+harn lint src scripts
+harn fmt --check src scripts
+harn run scripts/regen.harn
 ```
 
 Live integration tests need a `NOTION_TOKEN` env var pointed at a sandbox
@@ -33,9 +33,9 @@ workspace. Recorded tests don't.
 
 ## Sibling repo
 
-Local relative path to the codegen library:
-`/Users/ksinder/projects/harn-openapi`. Develop the two together; many bugs
-in this repo will trace back to a missing case in the codegen.
+The codegen library is a git dependency on `harn-openapi`. For local
+multi-repo development, temporarily switch that dependency to a path checkout
+and switch it back before publishing a package PR.
 
 ## Upstream conventions
 

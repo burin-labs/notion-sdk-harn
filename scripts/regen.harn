@@ -11,8 +11,7 @@
 //   harn run scripts/regen.harn -- --apply   # write mode
 //
 // The harn-openapi dependency is resolved via `[dependencies]` in
-// `harn.toml` (path = "../harn-openapi" until package management v0
-// lands, per harn#345). Run `harn install` once before first use.
+// `harn.toml`. Run `harn install` once before first use.
 import { codegen_module, operations, parse } from "harn-openapi/default"
 
 let FIXTURE_PATH = "tests/fixtures/notion.openapi.json"

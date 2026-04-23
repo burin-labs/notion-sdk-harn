@@ -15,14 +15,11 @@ which imports this SDK for its outbound surface.
 
 ## Install
 
-Once Harn package management v0
-([harn#345](https://github.com/burin-labs/harn/issues/345)) lands:
-
 ```sh
-harn add github.com/burin-labs/notion-sdk-harn@v0.1.0
+harn add github.com/burin-labs/notion-sdk-harn@main
 ```
 
-Until then, depend on this repo via a path import in your `harn.toml`:
+For local multi-repo development, a path dependency is still useful:
 
 ```toml
 [dependencies]
@@ -32,7 +29,7 @@ notion-sdk-harn = { path = "../notion-sdk-harn" }
 ## Usage
 
 ```harn
-import notion from "notion-sdk-harn"
+import notion from "notion-sdk-harn/default"
 
 let client = notion.Client({
   token: env("NOTION_TOKEN"),
@@ -81,6 +78,17 @@ This reads the pinned `tests/fixtures/notion.openapi.json` and rewrites
 
 This repo is being built out by Claude Code sessions following a structured
 prompt. **Read [SESSION_PROMPT.md](./SESSION_PROMPT.md) before making changes.**
+
+Install the pinned Harn CLI from crates.io and resolve package dependencies:
+
+```sh
+cargo install harn-cli --version "$(cat .harn-version)" --locked
+harn install
+harn check src scripts
+harn lint src scripts
+harn fmt --check src scripts
+harn run scripts/regen.harn
+```
 
 ## License
 
