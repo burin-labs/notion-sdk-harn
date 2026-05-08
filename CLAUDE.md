@@ -21,7 +21,7 @@ Install the pinned Harn CLI from crates.io and run the local gate:
 
 ```sh
 cargo install harn-cli --version "$(cat .harn-version)" --locked
-harn install
+harn install --locked
 harn check src scripts
 harn lint src scripts
 harn fmt --check src scripts
@@ -33,7 +33,7 @@ workspace. Recorded tests don't.
 
 ## Sibling repo
 
-The codegen library is a git dependency on `harn-openapi`. For local
+The codegen library is a pinned git dependency on `harn-openapi`. For local
 multi-repo development, temporarily switch that dependency to a path checkout
 and switch it back before publishing a package PR.
 

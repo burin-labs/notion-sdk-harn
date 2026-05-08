@@ -19,12 +19,19 @@ which imports this SDK for its outbound surface.
 harn add github.com/burin-labs/notion-sdk-harn@main
 ```
 
+That publishable path resolves this package and its generator/runtime helper
+dependencies from `harn.toml`; it does not require sibling checkouts.
+
 For local multi-repo development, a path dependency is still useful:
 
 ```toml
 [dependencies]
 notion-sdk-harn = { path = "../notion-sdk-harn" }
 ```
+
+Keep path dependencies local-only. Before publishing or opening package
+readiness changes, switch back to the git-backed manifest dependency path and
+run `harn install --locked`.
 
 ## Usage
 
@@ -68,11 +75,28 @@ if res.is_err() {
 ## Regenerating from the OpenAPI spec
 
 ```sh
+harn install --locked
+harn run scripts/regen.harn -- --apply
 harn run scripts/regen.harn
 ```
 
 This reads the pinned `tests/fixtures/notion.openapi.json` and rewrites
 `src/lib.harn` via [harn-openapi](https://github.com/burin-labs/harn-openapi).
+The current generator ref is the `harn-openapi` revision pinned in
+`harn.toml` and `harn.lock`. The second command is the drift check used by CI:
+it exits non-zero when the committed SDK output is missing or stale.
+
+To refresh the upstream Notion OpenAPI fixture:
+
+```sh
+curl -fsSL https://developers.notion.com/openapi.json \
+  > tests/fixtures/notion.openapi.json
+harn run scripts/regen.harn -- --apply
+harn check src scripts
+harn lint src scripts
+harn fmt --check src scripts
+harn run scripts/regen.harn
+```
 
 ## Development
 
@@ -83,7 +107,7 @@ Install the pinned Harn CLI from crates.io and resolve package dependencies:
 
 ```sh
 cargo install harn-cli --version "$(cat .harn-version)" --locked
-harn install
+harn install --locked
 harn check src scripts
 harn lint src scripts
 harn fmt --check src scripts

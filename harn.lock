@@ -5,6 +5,6 @@ version = 1
 [[package]]
 name = "harn-openapi"
 source = "git+https://github.com/burin-labs/harn-openapi"
-rev_request = "main"
-commit = "dbd1519cd8db9e77f7246ac97bbc1808c54c8c70"
-content_hash = "sha256:28ac1fb9c36277eb6810b7cc26ad4ea161a43e82efc6d64bc7d7d8d510d99c6a"
+rev_request = "4af43561c7b6855693b3219991fbb14c19c57fbe"
+commit = "4af43561c7b6855693b3219991fbb14c19c57fbe"
+content_hash = "sha256:25fb8711829dbb5bd79f63aa4bfdbda725d97ccf6b0b651fc3dc65f6dfbdde85"

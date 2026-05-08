@@ -3,43 +3,154 @@
  * Source doc: Notion API (OpenAPI 3.1.0)
  * Module:     notion
  */
-type GetBlockChildrenResponse = {block: dict, has_more: bool, next_cursor: dict, object: string, results: list, type: string}
+type GetBlockChildrenResponse = {
+  block: dict,
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+}
 
-type PatchBlockChildrenResponse = {block: dict, has_more: bool, next_cursor: dict, object: string, results: list, type: string}
+type PatchBlockChildrenResponse = {
+  block: dict,
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+}
 
-type ListCommentsResponse = {comment: dict, has_more: bool, next_cursor: dict, object: string, results: list, type: string}
+type ListCommentsResponse = {
+  comment: dict,
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+}
 
-type ListCustomEmojisResponse = {has_more: bool, next_cursor: dict, object: string, results: list, type: string}
+type ListCustomEmojisResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+}
 
-type PostDatabaseQueryResponse = {has_more: bool, next_cursor: dict, object: string, page_or_data_source: dict, results: list, type: string}
+type PostDatabaseQueryResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  page_or_data_source: dict,
+  results: list,
+  type: string,
+}
 
 type ListDataSourceTemplatesResponse = {has_more: bool, next_cursor: dict, templates: list}
 
-type ListFileUploadsResponse = {file_upload: dict, has_more: bool, next_cursor: dict, object: string, results: list, type: string}
+type ListFileUploadsResponse = {
+  file_upload: dict,
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+}
 
-type FileUploadObjectResponse = {complete_url: string, content_length: dict, content_type: dict, created_by: dict, created_time: string, expiry_time: dict, file_import_result: dict, filename: dict, id: string, in_trash: bool, last_edited_time: string, number_of_parts: dict, object: string, status: string, upload_url: string}
+type FileUploadObjectResponse = {
+  complete_url: string,
+  content_length: dict,
+  content_type: dict,
+  created_by: dict,
+  created_time: string,
+  expiry_time: dict,
+  file_import_result: dict,
+  filename: dict,
+  id: string,
+  in_trash: bool,
+  last_edited_time: string,
+  number_of_parts: dict,
+  object: string,
+  status: string,
+  upload_url: string,
+}
 
 type IntrospectTokenResponse = {active: bool, iat: int, request_id: string, scope: string}
 
 type RevokeTokenResponse = {request_id: string}
 
-type CreateATokenResponse = {access_token: string, bot_id: string, duplicated_template_id: dict, owner: dict, refresh_token: dict, request_id: string, token_type: string, workspace_icon: dict, workspace_id: string, workspace_name: dict}
+type CreateATokenResponse = {
+  access_token: string,
+  bot_id: string,
+  duplicated_template_id: dict,
+  owner: dict,
+  refresh_token: dict,
+  request_id: string,
+  token_type: string,
+  workspace_icon: dict,
+  workspace_id: string,
+  workspace_name: dict,
+}
 
-type PageMarkdownResponse = {id: string, markdown: string, object: string, truncated: bool, unknown_block_ids: list}
+type PageMarkdownResponse = {
+  id: string,
+  markdown: string,
+  object: string,
+  truncated: bool,
+  unknown_block_ids: list,
+}
 
-type PostSearchResponse = {has_more: bool, next_cursor: dict, object: string, page_or_data_source: dict, results: list, type: string}
+type PostSearchResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  page_or_data_source: dict,
+  results: list,
+  type: string,
+}
 
-type GetUsersResponse = {has_more: bool, next_cursor: dict, object: string, results: list, type: string, user: dict}
+type GetUsersResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+  user: dict,
+}
 
 type UserObjectResponse = {avatar_url: dict, id: string, name: dict, object: string}
 
-type ListViewsResponse = {has_more: bool, next_cursor: dict, object: string, results: list, type: string, view: dict}
+type ListViewsResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  type: string,
+  view: dict,
+}
 
 type PartialDataSourceViewObjectResponse = {id: string, object: string, parent: dict, type: string}
 
-type ViewQueryResponse = {expires_at: string, has_more: bool, id: string, next_cursor: dict, object: string, results: list, total_count: float, view_id: string}
+type ViewQueryResponse = {
+  expires_at: string,
+  has_more: bool,
+  id: string,
+  next_cursor: dict,
+  object: string,
+  results: list,
+  total_count: float,
+  view_id: string,
+}
 
-type GetViewQueryResultsResponse = {has_more: bool, next_cursor: dict, object: string, page: dict, results: list, type: string}
+type GetViewQueryResultsResponse = {
+  has_more: bool,
+  next_cursor: dict,
+  object: string,
+  page: dict,
+  results: list,
+  type: string,
+}
 
 type DeletedViewQueryResponse = {deleted: bool, id: string, object: string}
 
@@ -47,29 +158,83 @@ type DeletedViewQueryResponse = {deleted: bool, id: string, object: string}
 pub fn new_client(
   base_url: string = "https://api.notion.com",
   token: string = "",
+  token_provider = nil,
   basic_user: string = "",
   basic_password: string = "",
-  extra_headers: dict = {["Notion-Version"]: "2022-06-28"},
+  basic_provider = nil,
+  extra_headers: dict = {"Notion-Version": "2022-06-28"},
 ) -> dict {
   return {
     base_url: base_url,
     token: token,
+    token_provider: token_provider,
     basic_user: basic_user,
     basic_password: basic_password,
+    basic_provider: basic_provider,
     extra_headers: extra_headers,
   }
 }
 
 fn _no_auth_headers(client: dict) -> dict {
-  var hs = {["Content-Type"]: "application/json"}
+  var hs = {"Content-Type": "application/json"}
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
   return hs
 }
 
+/** Build a token-provider hook backed by the active connector SecretProvider. */
+pub fn token_from_secret(secret_id: string) {
+  return fn() {
+    let value = secret_get(secret_id)
+    if value == nil {
+      return ""
+    }
+    return to_string(value)
+  }
+}
+
+/** Build an api-key-provider hook backed by the active connector SecretProvider. */
+pub fn api_key_from_secret(secret_ids: dict) {
+  return fn(scheme_name) {
+    let secret_id = secret_ids.get(scheme_name)
+    if secret_id == nil {
+      return ""
+    }
+    let value = secret_get(secret_id)
+    if value == nil {
+      return ""
+    }
+    return to_string(value)
+  }
+}
+
+fn _client_token(client: dict) -> string {
+  let provider = client.get("token_provider")
+  if provider != nil {
+    return to_string(provider())
+  }
+  return to_string(client.get("token") ?? "")
+}
+
+fn _client_api_key(client: dict, scheme_name: string) -> string {
+  let provider = client.get("api_key_provider")
+  if provider != nil {
+    return to_string(provider(scheme_name))
+  }
+  return to_string((client.get("api_keys") ?? {}).get(scheme_name) ?? "")
+}
+
+fn _client_basic(client: dict) -> dict {
+  let provider = client.get("basic_provider")
+  if provider != nil {
+    return provider()
+  }
+  return {user: client.get("basic_user") ?? "", password: client.get("basic_password") ?? ""}
+}
+
 fn _headers_bearerauth(client: dict) -> dict {
-  var hs = {Authorization: "Bearer " + to_string(client.token), ["Content-Type"]: "application/json"}
+  var hs = {Authorization: "Bearer " + _client_token(client), "Content-Type": "application/json"}
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
@@ -77,12 +242,105 @@ fn _headers_bearerauth(client: dict) -> dict {
 }
 
 fn _headers_basicauth(client: dict) -> dict {
-  let encoded = base64_encode(to_string(client.basic_user) + ":" + to_string(client.basic_password))
-  var hs = {Authorization: "Basic " + encoded, ["Content-Type"]: "application/json"}
+  let basic = _client_basic(client)
+  let encoded = base64_encode(to_string(basic.user) + ":" + to_string(basic.password))
+  var hs = {Authorization: "Basic " + encoded, "Content-Type": "application/json"}
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
   return hs
+}
+
+/** Pagination plans detected from the OpenAPI operation shapes. */
+pub fn pagination_plans() -> list {
+  return json_parse(
+    "[{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"get-block-children\",\"page_size_param\":\"page_size\",\"path\":\"/v1/blocks/{block_id}/children\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"list-comments\",\"page_size_param\":\"page_size\",\"path\":\"/v1/comments\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"list-custom-emojis\",\"page_size_param\":\"page_size\",\"path\":\"/v1/custom_emojis\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":null,\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"list-data-source-templates\",\"page_size_param\":\"page_size\",\"path\":\"/v1/data_sources/{data_source_id}/templates\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"list-file-uploads\",\"page_size_param\":\"page_size\",\"path\":\"/v1/file_uploads\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"get-users\",\"page_size_param\":\"page_size\",\"path\":\"/v1/users\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"list-views\",\"page_size_param\":\"page_size\",\"path\":\"/v1/views\"},{\"cursor_param\":\"start_cursor\",\"cursor_response_field\":\"next_cursor\",\"has_more_field\":\"has_more\",\"items_field\":\"results\",\"kind\":\"cursor\",\"method\":\"get\",\"operation_id\":\"get-view-query-results\",\"page_size_param\":\"page_size\",\"path\":\"/v1/views/{view_id}/queries/{query_id}\"}]",
+  )
+}
+
+pub fn pagination_plan(operation_id: string) -> dict? {
+  for plan in pagination_plans() {
+    if plan.operation_id == operation_id {
+      return plan
+    }
+  }
+  return nil
+}
+
+pub fn pagination_items(response: dict, plan: dict) -> list {
+  let field = plan.get("items_field")
+  if field == nil {
+    return []
+  }
+  let value = response.get(field)
+  if type_of(value) == "list" {
+    return value
+  }
+  return []
+}
+
+pub fn pagination_next(response: dict, plan: dict) -> dict {
+  let kind = plan.get("kind")
+  if kind == "cursor" {
+    let cursor_field = plan.get("cursor_response_field")
+    let cursor = if cursor_field == nil {
+      nil
+    } else {
+      response.get(cursor_field)
+    }
+    let has_more_field = plan.get("has_more_field")
+    let has_more = if has_more_field == nil {
+      cursor != nil
+    } else {
+      response.get(has_more_field)
+    }
+    return {done: cursor == nil || has_more == false, query: {[plan.cursor_param]: cursor}}
+  }
+  if kind == "page" {
+    return {done: false, query: {}}
+  }
+  if kind == "next_link" {
+    let field = plan.get("next_link_field")
+    let url = if field == nil {
+      nil
+    } else {
+      response.get(field)
+    }
+    return {done: url == nil || url == "", url: url}
+  }
+  return {done: true, query: {}}
+}
+
+/** Rate-limit response/header conventions detected from OpenAPI responses. */
+pub fn rate_limit_metadata() -> list {
+  return json_parse(
+    "[{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-a-block\",\"path\":\"/v1/blocks/{block_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"delete\",\"operation_id\":\"delete-a-block\",\"path\":\"/v1/blocks/{block_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-a-block\",\"path\":\"/v1/blocks/{block_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"get-block-children\",\"path\":\"/v1/blocks/{block_id}/children\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"patch-block-children\",\"path\":\"/v1/blocks/{block_id}/children\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"list-comments\",\"path\":\"/v1/comments\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-a-comment\",\"path\":\"/v1/comments\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-comment\",\"path\":\"/v1/comments/{comment_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"delete\",\"operation_id\":\"delete-a-comment\",\"path\":\"/v1/comments/{comment_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-a-comment\",\"path\":\"/v1/comments/{comment_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"list-custom-emojis\",\"path\":\"/v1/custom_emojis\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-a-database\",\"path\":\"/v1/data_sources\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-a-data-source\",\"path\":\"/v1/data_sources/{data_source_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-a-data-source\",\"path\":\"/v1/data_sources/{data_source_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"post-database-query\",\"path\":\"/v1/data_sources/{data_source_id}/query\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"list-data-source-templates\",\"path\":\"/v1/data_sources/{data_source_id}/templates\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-database\",\"path\":\"/v1/databases\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-database\",\"path\":\"/v1/databases/{database_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-database\",\"path\":\"/v1/databases/{database_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"list-file-uploads\",\"path\":\"/v1/file_uploads\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-file\",\"path\":\"/v1/file_uploads\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-file-upload\",\"path\":\"/v1/file_uploads/{file_upload_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"complete-file-upload\",\"path\":\"/v1/file_uploads/{file_upload_id}/complete\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"upload-file\",\"path\":\"/v1/file_uploads/{file_upload_id}/send\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"post-page\",\"path\":\"/v1/pages\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-a-page\",\"path\":\"/v1/pages/{page_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"patch-page\",\"path\":\"/v1/pages/{page_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-page-markdown\",\"path\":\"/v1/pages/{page_id}/markdown\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-page-markdown\",\"path\":\"/v1/pages/{page_id}/markdown\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"move-page\",\"path\":\"/v1/pages/{page_id}/move\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-a-page-property\",\"path\":\"/v1/pages/{page_id}/properties/{property_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"post-search\",\"path\":\"/v1/search\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"get-users\",\"path\":\"/v1/users\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"get-self\",\"path\":\"/v1/users/me\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"get-user\",\"path\":\"/v1/users/{user_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"list-views\",\"path\":\"/v1/views\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-view\",\"path\":\"/v1/views\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"retrieve-a-view\",\"path\":\"/v1/views/{view_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"delete\",\"operation_id\":\"delete-view\",\"path\":\"/v1/views/{view_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"patch\",\"operation_id\":\"update-a-view\",\"path\":\"/v1/views/{view_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"post\",\"operation_id\":\"create-view-query\",\"path\":\"/v1/views/{view_id}/queries\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"get\",\"operation_id\":\"get-view-query-results\",\"path\":\"/v1/views/{view_id}/queries/{query_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"},{\"limit_headers\":[],\"method\":\"delete\",\"operation_id\":\"delete-view-query\",\"path\":\"/v1/views/{view_id}/queries/{query_id}\",\"remaining_headers\":[],\"reset_headers\":[],\"retry_after_header\":null,\"status\":\"429\"}]",
+  )
+}
+
+fn _header_ci(headers: dict, wanted: string) {
+  for entry in headers {
+    if entry.key.lower() == wanted.lower() {
+      return entry.value
+    }
+  }
+  return nil
+}
+
+pub fn rate_limit_from_response(resp: dict) -> dict {
+  let headers = resp.get("headers") ?? {}
+  return {
+    status: resp.get("status"),
+    retry_after: _header_ci(headers, "Retry-After"),
+    limit: _header_ci(headers, "X-RateLimit-Limit"),
+    remaining: _header_ci(headers, "X-RateLimit-Remaining"),
+    reset: _header_ci(headers, "X-RateLimit-Reset"),
+  }
+}
+
+pub fn is_rate_limited_response(resp: dict) -> bool {
+  let headers = resp.get("headers") ?? {}
+  return resp.get("status") == 429 || _header_ci(headers, "Retry-After") != nil
 }
 
 fn _interpolate(template: string, bindings: dict) -> string {
