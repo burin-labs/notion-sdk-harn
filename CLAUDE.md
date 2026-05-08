@@ -20,7 +20,8 @@ management, and the v0 milestones.
 Install the pinned Harn CLI from crates.io and run the local gate:
 
 ```sh
-cargo install harn-cli --version "$(cat .harn-version)" --locked
+version="$(tr -d '[:space:]' < .harn-version)"
+cargo install harn-cli --version "$version" --locked
 harn install --locked
 harn check src scripts
 harn lint src scripts
