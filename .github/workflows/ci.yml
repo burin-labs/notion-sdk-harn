@@ -54,7 +54,10 @@ jobs:
         run: harn --version
 
       - name: Install Harn dependencies
-        run: harn install
+        run: harn install --locked
+
+      - name: Check package manifest
+        run: harn package check
 
       - name: Check
         run: harn check src scripts
@@ -81,6 +84,7 @@ jobs:
           EOF
           cd "$smoke_root"
           harn add "$GITHUB_WORKSPACE@HEAD"
+          harn install --locked
           printf 'import "notion-sdk-harn/default"\n' > smoke.harn
           harn check smoke.harn
 
