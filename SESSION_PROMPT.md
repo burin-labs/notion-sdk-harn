@@ -158,13 +158,13 @@ The codegen will eventually produce code matching this shape.
   but not required for v0.
 - Run before committing:
   ```sh
-  cd /Users/ksinder/projects/harn
-  cargo run --quiet --bin harn -- check /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
-  cargo run --quiet --bin harn -- lint  /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
-  cargo run --quiet --bin harn -- fmt --check /Users/ksinder/projects/notion-sdk-harn/src/lib.harn
-  for t in /Users/ksinder/projects/notion-sdk-harn/tests/*.harn; do
-    cargo run --quiet --bin harn -- run "$t" || exit 1
-  done
+  version="$(tr -d '[:space:]' < .harn-version)"
+  cargo install harn-cli --version "$version" --locked
+  harn install --locked
+  harn check src scripts
+  harn lint src scripts
+  harn fmt --check src scripts
+  harn run scripts/regen.harn
   ```
 
 ## Definition of done for v0

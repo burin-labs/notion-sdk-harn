@@ -106,13 +106,17 @@ prompt. **Read [SESSION_PROMPT.md](./SESSION_PROMPT.md) before making changes.**
 Install the pinned Harn CLI from crates.io and resolve package dependencies:
 
 ```sh
-cargo install harn-cli --version "$(cat .harn-version)" --locked
+version="$(tr -d '[:space:]' < .harn-version)"
+cargo install harn-cli --version "$version" --locked
 harn install --locked
 harn check src scripts
 harn lint src scripts
 harn fmt --check src scripts
 harn run scripts/regen.harn
 ```
+
+CI uses the same `.harn-version` pin, installing `harn-cli` from crates.io
+instead of relying on an ambient sibling checkout.
 
 ## License
 
