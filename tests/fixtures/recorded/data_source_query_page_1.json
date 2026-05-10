@@ -1,0 +1,31 @@
+{
+  "object": "list",
+  "type": "page_or_data_source",
+  "page_or_data_source": {},
+  "results": [
+    {
+      "object": "page",
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+      "properties": {
+        "Name": {
+          "id": "title",
+          "type": "title",
+          "title": [{"type": "text", "text": {"content": "Row 1"}, "plain_text": "Row 1"}]
+        }
+      }
+    },
+    {
+      "object": "page",
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+      "properties": {
+        "Name": {
+          "id": "title",
+          "type": "title",
+          "title": [{"type": "text", "text": {"content": "Row 2"}, "plain_text": "Row 2"}]
+        }
+      }
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "page-2-cursor"
+}

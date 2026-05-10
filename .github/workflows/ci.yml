@@ -60,16 +60,19 @@ jobs:
         run: harn package check
 
       - name: Check
-        run: harn check src scripts
+        run: harn check src scripts tests
 
       - name: Lint
-        run: harn lint src scripts
+        run: harn lint src scripts tests
 
       - name: Format
-        run: harn fmt --check src scripts
+        run: harn fmt --check src scripts tests
 
       - name: Regen drift check
         run: harn run scripts/regen.harn
+
+      - name: Recorded smoke tests
+        run: harn run tests/recorded/notion_sdk_smoke.harn
 
       - name: Package install smoke
         shell: bash
@@ -85,7 +88,16 @@ jobs:
           cd "$smoke_root"
           harn add "$GITHUB_WORKSPACE@HEAD"
           harn install --locked
-          printf 'import "notion-sdk-harn/default"\n' > smoke.harn
+          cat > smoke.harn <<'EOF'
+          import { new_client } from "notion-sdk-harn"
+          import { decode_thrown, paginate } from "notion-sdk-harn/helpers"
+
+          pipeline default() {
+            let _ = new_client
+            let _decode = decode_thrown
+            let _paginate = paginate
+          }
+          EOF
           harn check smoke.harn
 
   ci-status:

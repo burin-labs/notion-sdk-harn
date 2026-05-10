@@ -1,0 +1,15 @@
+{
+  "object": "list",
+  "type": "user",
+  "user": {},
+  "results": [
+    {
+      "object": "bot",
+      "id": "55555555-5555-5555-5555-555555555555",
+      "name": "Notion-SDK-Harn",
+      "type": "bot"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
