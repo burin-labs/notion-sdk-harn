@@ -1,0 +1,165 @@
+// notion-sdk-harn helpers — pagination + structured error handling.
+//
+// The generated `src/lib.harn` throws on non-2xx responses with a string
+// shaped `"<fn_name>: HTTP <status> <body>"`. This module decodes those
+// strings into a structured NotionError dict and supplies a small
+// `paginate` helper that walks Notion's `next_cursor` / `has_more`
+// convention for any list-style endpoint.
+/**
+ * Decode a thrown value (string or dict) from a generated SDK call into a
+ * NotionError dict shaped:
+ *
+ *   {
+ *     status:      int,    // HTTP status code, or 0 if not a wire error
+ *     code:        string, // Notion error code or fallback ("transport_error")
+ *     message:     string, // Notion-provided message or raw body text
+ *     request_id:  string, // x-request-id, or "" if unavailable
+ *     body:        string, // raw response body
+ *     operation:   string, // SDK operation name that raised
+ *   }
+ *
+ * Accepts:
+ *   - the canonical generator string `"fn_name: HTTP <status> <body>"`
+ *   - a dict (forward-compatible with a future structured-throw codegen)
+ *   - any other value, in which case `code` is `"transport_error"` and
+ *     `message` is the value's string form.
+ *
+ * `request_id` is empty until the codegen propagates response headers
+ * into thrown values; the dict path will populate it from
+ * `x-request-id` / `request-id` once available.
+ */
+pub fn decode_thrown(thrown) -> dict {
+  if type_of(thrown) == "dict" {
+    return _from_dict(thrown)
+  }
+  let text = to_string(thrown)
+  let marker = ": HTTP "
+  let marker_index = text.index_of(marker)
+  if marker_index < 0 {
+    return {status: 0, code: "transport_error", message: text, request_id: "", body: "", operation: ""}
+  }
+  let operation = text[0:marker_index]
+  let detail = text[marker_index + len(marker):len(text)]
+  let space = detail.index_of(" ")
+  let status_text = if space < 0 {
+    detail
+  } else {
+    detail[0:space]
+  }
+  let body_text = if space < 0 {
+    ""
+  } else {
+    detail[space + 1:len(detail)]
+  }
+  let status = to_int(status_text) ?? 0
+  let payload_dict = _safe_parse_dict(body_text)
+  return {
+    status: status,
+    code: to_string(payload_dict.get("code") ?? _default_code_for_status(status)),
+    message: to_string(payload_dict.get("message") ?? body_text),
+    request_id: to_string(payload_dict.get("request_id") ?? ""),
+    body: body_text,
+    operation: operation,
+  }
+}
+
+fn _from_dict(value: dict) -> dict {
+  let status = to_int(value.get("status") ?? 0) ?? 0
+  let headers = if type_of(value.get("headers")) == "dict" {
+    value.get("headers")
+  } else {
+    {}
+  }
+  return {
+    status: status,
+    code: to_string(value.get("code") ?? _default_code_for_status(status)),
+    message: to_string(value.get("message") ?? to_string(value)),
+    request_id: to_string(value.get("request_id") ?? headers.get("x-request-id") ?? headers.get("request-id") ?? ""),
+    body: to_string(value.get("body") ?? ""),
+    operation: to_string(value.get("operation") ?? ""),
+  }
+}
+
+fn _safe_parse_dict(text: string) -> dict {
+  let parsed = try {
+    json_parse(text)
+  }
+  if is_err(parsed) {
+    return {}
+  }
+  let value = unwrap(parsed)
+  if type_of(value) == "dict" {
+    return value
+  }
+  return {}
+}
+
+/**
+ * Canonical Notion error code for a given HTTP status, per
+ * https://developers.notion.com/reference/status-codes.
+ */
+fn _default_code_for_status(status: int) -> string {
+  if status == 400 {
+    return "validation_error"
+  }
+  if status == 401 {
+    return "unauthorized"
+  }
+  if status == 403 {
+    return "restricted_resource"
+  }
+  if status == 404 {
+    return "object_not_found"
+  }
+  if status == 409 {
+    return "conflict_error"
+  }
+  if status == 429 {
+    return "rate_limited"
+  }
+  if status >= 500 {
+    return "internal_server_error"
+  }
+  if status >= 400 {
+    return "validation_error"
+  }
+  return "notion_error"
+}
+
+/**
+ * Walk a cursored list-style Notion endpoint and emit each item lazily.
+ *
+ * The fetcher receives a dict containing the next-page cursor (under
+ * `start_cursor`) and must return a Notion list response shaped
+ * `{results: list, has_more: bool, next_cursor: string?}`. Initial args
+ * are merged into every fetch so callers can pin filters, page sizes, or
+ * sort orders that should hold across pages.
+ *
+ * Throws from the fetcher (including non-2xx HTTP errors) propagate to
+ * the consumer at the next pull.
+ */
+pub gen fn paginate(fetcher, initial_args: dict = {}) -> Stream<dict> {
+  var args = initial_args
+  while true {
+    let resp = fetcher(args)
+    let items = resp.get("results") ?? []
+    for item in items {
+      emit item
+    }
+    let has_more = resp.get("has_more") ?? false
+    let cursor = resp.get("next_cursor")
+    if !has_more || cursor == nil {
+      break
+    }
+    args = {...initial_args, start_cursor: cursor}
+  }
+}
+
+/** Eager variant of `paginate` that materializes all items into a list. */
+pub fn collect_all(fetcher, initial_args: dict = {}) -> list {
+  var out = []
+  for item in paginate(fetcher, initial_args) {
+    out = out + [item]
+  }
+  return out
+}

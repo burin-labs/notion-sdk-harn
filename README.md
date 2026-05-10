@@ -5,7 +5,7 @@ Harn. The source is generated from
 [Notion's OpenAPI 3.1 spec](https://developers.notion.com/openapi.json) via
 [harn-openapi](https://github.com/burin-labs/harn-openapi).
 
-> **Status: pre-alpha** — actively developed in tandem with
+> **Status: pre-1.0** — actively developed in tandem with
 > [burin-labs/harn](https://github.com/burin-labs/harn). See the
 > [Pure-Harn Connectors Pivot epic #350](https://github.com/burin-labs/harn/issues/350).
 
@@ -16,11 +16,16 @@ which imports this SDK for its outbound surface.
 ## Install
 
 ```sh
-harn add github.com/burin-labs/notion-sdk-harn@main
+harn add github.com/burin-labs/notion-sdk-harn
 ```
 
 That publishable path resolves this package and its generator/runtime helper
-dependencies from `harn.toml`; it does not require sibling checkouts.
+dependencies from `harn.toml`; it does not require sibling checkouts. Pin a
+specific version in production:
+
+```sh
+harn add github.com/burin-labs/notion-sdk-harn@v0.1.0
+```
 
 For local multi-repo development, a path dependency is still useful:
 
@@ -36,41 +41,154 @@ run `harn install --locked`.
 ## Usage
 
 ```harn
-import notion from "notion-sdk-harn/default"
+import {
+  get_users,
+  new_client,
+  patch_page,
+  post_database_query,
+  post_page,
+  retrieve_a_page,
+} from "notion-sdk-harn"
+import { collect_all, decode_thrown, paginate } from "notion-sdk-harn/helpers"
 
-let client = notion.Client({
-  token: env("NOTION_TOKEN"),
-  notion_version: "2022-06-28",
-})
+let client = new_client(
+  "https://api.notion.com",
+  env("NOTION_TOKEN"),
+  nil,
+  "",
+  "",
+  nil,
+  {"Notion-Version": "2022-06-28"},
+)
 
 // Retrieve a page
-let page = client.pages.retrieve({ page_id: "abc123..." })
-println(page.properties.Title.title[0].plain_text)
+let page = retrieve_a_page(client, "abc123...")
+println(page.properties.Name.title[0].plain_text)
 
-// Query a database with auto-pagination
-for row in client.databases.query_all({
-  database_id: "def456...",
-  filter: { property: "Status", select: { equals: "Done" } },
-}) {
+// Query a data source with auto-pagination (lazy stream)
+for row in paginate(
+  fn(args) {
+    return post_database_query(
+      client,
+      "def456...",
+      {filter: {property: "Status", select: {equals: "Done"}}, ...args},
+    )
+  },
+) {
   println(row.id)
 }
 
-// Create a comment
-client.comments.create({
-  parent: { page_id: "abc123..." },
-  rich_text: [{ text: { content: "Hello from Harn!" } }],
-})
+// Or collect every row eagerly
+let all_rows = collect_all(fn(args) { return post_database_query(client, "def456...", args) })
+
+// Create a comment using a typed variant constructor
+import { create_a_comment, create_a_comment_variant1 } from "notion-sdk-harn"
+
+create_a_comment(
+  client,
+  create_a_comment_variant1(
+    {type: "page_id", page_id: "abc123..."},
+    [{type: "text", text: {content: "Hello from Harn!"}}],
+  ),
+)
 ```
 
-Errors come back as a structured `NotionError` shape:
+## Errors
+
+Generated operations throw on any non-2xx response. Wrap calls in `try { ... }`
+and pass the `Err` value through `decode_thrown` to recover a structured error:
 
 ```harn
-let res = try client.pages.retrieve({ page_id: "missing" })
-if res.is_err() {
-  let e = res.err()
-  // e == { status: 404, code: "object_not_found", message: "...", request_id: "..." }
+import { decode_thrown } from "notion-sdk-harn/helpers"
+
+let result = try { retrieve_a_page(client, "missing") }
+if is_err(result) {
+  let err = decode_thrown(unwrap_err(result))
+  // err == {
+  //   status: 404,
+  //   code: "object_not_found",
+  //   message: "Could not find page with ID: …",
+  //   request_id: "",            // populated once codegen forwards headers
+  //   body: "{...raw body...}",
+  //   operation: "retrieve_a_page",
+  // }
 }
 ```
+
+`decode_thrown` defaults `code` to a canonical Notion error string when the
+upstream payload omits it (e.g. `unauthorized` for 401, `rate_limited` for 429),
+following the Notion
+[status-codes reference](https://developers.notion.com/reference/status-codes).
+
+## Supported endpoints
+
+The package re-exports every operation in the pinned Notion OpenAPI document
+(70 operations across the resource families below). Names are snake_case
+versions of the Notion `operationId`s; argument lists follow the spec's
+parameter order with optional parameters defaulted to `nil`.
+
+| Resource | Operations |
+| --- | --- |
+| **pages** | `retrieve_a_page`, `post_page`, `patch_page`, `move_page`, `retrieve_a_page_property`, `retrieve_page_markdown`, `update_page_markdown` (+ `update_page_markdown_*` variant constructors) |
+| **databases** | `create_database`, `create_a_database`, `retrieve_database`, `update_database` |
+| **data\_sources** | `retrieve_a_data_source`, `update_a_data_source`, `post_database_query`, `list_data_source_templates` |
+| **blocks** | `retrieve_a_block`, `update_a_block` (+ variants), `delete_a_block`, `get_block_children`, `patch_block_children` |
+| **comments** | `create_a_comment` (+ variants), `list_comments`, `retrieve_comment`, `update_a_comment`, `delete_a_comment` |
+| **users** | `get_self`, `get_user`, `get_users` |
+| **search** | `post_search` |
+| **file uploads** | `create_file`, `list_file_uploads`, `retrieve_file_upload`, `upload_file`, `complete_file_upload` |
+| **views** | `create_view`, `list_views`, `retrieve_a_view`, `update_a_view`, `delete_view`, `create_view_query`, `get_view_query_results`, `delete_view_query` |
+| **emojis** | `list_custom_emojis` |
+| **OAuth** | `create_a_token` (+ variants), `introspect_token`, `revoke_token` |
+
+Every list-style endpoint that follows Notion's `next_cursor` / `has_more`
+convention (databases query, comments, users, blocks children, custom emojis,
+views, file uploads, view query results, data-source templates) is walkable
+with the [`paginate`](src/helpers.harn) helper.
+
+The full machine-readable inventory ships in `src/lib.harn`'s
+`pagination_plans()` and `rate_limit_metadata()` exports.
+
+## Unsupported / out-of-scope endpoints
+
+The following Notion surfaces are **deliberately not in this package**:
+
+- **Inbound webhook delivery and verification.** Webhook subscription
+  management lives in the Notion integration UI, not the public REST API.
+  Webhook receivers — payload verification, normalization, dispatch —
+  belong in [harn-notion-connector](https://github.com/burin-labs/harn-notion-connector).
+- **Operations the upstream OpenAPI doesn't describe.** If Notion adds a new
+  endpoint, refresh the fixture and regenerate (see below) — do not
+  hand-write a one-off wrapper here.
+- **Streaming / long-poll endpoints.** None exist in the current Notion API.
+
+If you hit a missing operation, refresh `tests/fixtures/notion.openapi.json`
+from `https://developers.notion.com/openapi.json` and regenerate.
+
+## API-version pin
+
+`new_client` does not pin `Notion-Version` for you. Always pass it via
+`extra_headers`:
+
+```harn
+let client = new_client(
+  "https://api.notion.com",
+  env("NOTION_TOKEN"),
+  nil, "", "", nil,
+  {"Notion-Version": "2022-06-28"},
+)
+```
+
+The codegen emits `2022-06-28` as a stable default in the generated
+`new_client` signature. Pin to a newer version (for example
+`"2026-03-11"`, used by `harn-notion-connector`) when an endpoint requires
+a newer dialect — Notion guarantees backward compatibility within a major
+version per its
+[versioning policy](https://developers.notion.com/reference/versioning).
+
+The pinned upstream OpenAPI snapshot lives at
+`tests/fixtures/notion.openapi.json`; bump it (and regenerate) any time
+you intentionally adopt a new Notion API version.
 
 ## Regenerating from the OpenAPI spec
 
@@ -96,12 +214,10 @@ harn check src scripts
 harn lint src scripts
 harn fmt --check src scripts
 harn run scripts/regen.harn
+harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
 ## Development
-
-This repo is being built out by Claude Code sessions following a structured
-prompt. **Read [SESSION_PROMPT.md](./SESSION_PROMPT.md) before making changes.**
 
 Install the pinned Harn CLI from crates.io and resolve package dependencies:
 
@@ -109,14 +225,18 @@ Install the pinned Harn CLI from crates.io and resolve package dependencies:
 version="$(tr -d '[:space:]' < .harn-version)"
 cargo install harn-cli --version "$version" --locked
 harn install --locked
-harn check src scripts
-harn lint src scripts
-harn fmt --check src scripts
+harn check src scripts tests
+harn lint src scripts tests
+harn fmt --check src scripts tests
 harn run scripts/regen.harn
+harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
 CI uses the same `.harn-version` pin, installing `harn-cli` from crates.io
-instead of relying on an ambient sibling checkout.
+instead of relying on an ambient sibling checkout. The `tests/recorded/`
+suite uses the stdlib `http_mock` runtime — no live HTTP traffic in CI.
+Live integration tests behind `NOTION_TOKEN` are welcome but not required;
+keep them out of CI.
 
 ## License
 
