@@ -9,6 +9,7 @@ import {
   create_a_comment,
   create_a_comment_variant1,
   get_users,
+  introspect_token,
   new_client,
   post_database_query,
   retrieve_a_page,
@@ -37,6 +38,8 @@ let USERS_PAGE_1_PATH = "tests/fixtures/recorded/users_list_page_1.json"
 
 let USERS_PAGE_2_PATH = "tests/fixtures/recorded/users_list_page_2.json"
 
+let OAUTH_INTROSPECT_OK_PATH = "tests/fixtures/recorded/oauth_introspect_ok.json"
+
 fn fixture_client() {
   return new_client(BASE_URL, TOKEN, nil, "", "", nil, {"Notion-Version": NOTION_VERSION})
 }
@@ -64,6 +67,43 @@ pipeline default() {
   expect_eq(calls[0].headers.authorization, "Bearer " + TOKEN, "bearer token applied")
   expect_eq(calls[0].headers.get("notion-version"), NOTION_VERSION, "notion-version header pinned")
   // ---------------------------------------------------------------
+  // client plumbing — provider tokens, base URL joins, version override
+  // ---------------------------------------------------------------
+  http_mock_clear()
+  http_mock(
+    "GET",
+    BASE_URL + "/v1/pages/" + page_id,
+    {status: 200, body: read_file(PAGE_OK_PATH), headers: {"x-request-id": "req-page-provider"}},
+  )
+  let provider_client = new_client(
+    BASE_URL + "/",
+    "",
+    fn() { return "provider_test_token" },
+    "",
+    "",
+    nil,
+    {"Notion-Version": NOTION_VERSION},
+  )
+  let provider_page = retrieve_a_page(provider_client, page_id, nil, "2026-03-11")
+  expect_eq(provider_page.id, page_id, "provider-token client retrieves page")
+  let provider_calls = http_mock_calls({include_sensitive: true})
+  expect_eq(len(provider_calls), 1, "provider-token client made one request")
+  expect_eq(
+    provider_calls[0].url,
+    BASE_URL + "/v1/pages/" + page_id,
+    "trailing slash base URL normalized",
+  )
+  expect_eq(
+    provider_calls[0].headers.authorization,
+    "Bearer provider_test_token",
+    "token provider applied",
+  )
+  expect_eq(
+    provider_calls[0].headers.get("notion-version"),
+    "2026-03-11",
+    "operation version override applied",
+  )
+  // ---------------------------------------------------------------
   // pages.retrieve — 404 → structured NotionError via decode_thrown
   // ---------------------------------------------------------------
   http_mock_clear()
@@ -81,6 +121,7 @@ pipeline default() {
   expect_eq(err_404.status, 404, "decoded status")
   expect_eq(err_404.code, "object_not_found", "decoded Notion code")
   expect_contains(err_404.message, "Could not find page", "decoded Notion message")
+  expect_eq(err_404.request_id, "req-404", "decoded request id from response headers")
   expect_eq(err_404.operation, "retrieve_a_page", "decoded operation name")
   // ---------------------------------------------------------------
   // data_sources.query — paginated walk via paginate(...)
@@ -158,6 +199,44 @@ pipeline default() {
   expect_eq(comment_body.parent.page_id, page_id, "comment parent forwarded")
   expect_eq(len(comment_body.rich_text), 1, "rich_text array forwarded")
   expect_eq(comment_body.get("_variant"), nil, "internal _variant marker stripped before send")
+  // ---------------------------------------------------------------
+  // oauth.introspect — Basic auth provider, not Bearer auth
+  // ---------------------------------------------------------------
+  http_mock_clear()
+  http_mock(
+    "POST",
+    BASE_URL + "/v1/oauth/introspect",
+    {
+      status: 200,
+      body: read_file(OAUTH_INTROSPECT_OK_PATH),
+      headers: {"x-request-id": "req-oauth-introspect"},
+    },
+  )
+  let oauth_client = new_client(
+    BASE_URL,
+    "ignored-bearer-token",
+    nil,
+    "",
+    "",
+    fn() { return {user: "client-id", password: "client-secret"} },
+    {"Notion-Version": NOTION_VERSION},
+  )
+  let token_state = introspect_token(oauth_client, {token: "access-token"}, "2026-03-11")
+  expect_eq(token_state.active, true, "introspection response decoded")
+  let oauth_calls = http_mock_calls({include_sensitive: true})
+  expect_eq(len(oauth_calls), 1, "one oauth introspection call")
+  expect_eq(
+    oauth_calls[0].headers.authorization,
+    "Basic Y2xpZW50LWlkOmNsaWVudC1zZWNyZXQ=",
+    "basic provider applied",
+  )
+  expect_eq(
+    oauth_calls[0].headers.get("notion-version"),
+    "2026-03-11",
+    "oauth version override applied",
+  )
+  let oauth_body = json_parse(oauth_calls[0].body)
+  expect_eq(oauth_body.token, "access-token", "oauth body forwarded")
   // ---------------------------------------------------------------
   // users.list — paginate via paginate(...) with explicit page_size
   // ---------------------------------------------------------------

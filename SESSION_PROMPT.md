@@ -1,8 +1,15 @@
 # SESSION_PROMPT.md — notion-sdk-harn v0
 
-You are picking up the v0 build of `notion-sdk-harn`, a typed Notion REST
+This is the historical bootstrap for `notion-sdk-harn`, a typed Notion REST
 API SDK in pure Harn. The source is generated from Notion's OpenAPI 3.1
-spec via `harn-openapi`. This file is your self-contained bootstrap.
+spec via `harn-openapi`.
+
+Current state: package-managed installs are working, `src/lib.harn` is
+generated, recorded smoke tests cover auth, errors, pagination, and
+polymorphic request bodies, and `README.md` / `CLAUDE.md` are the current
+operator docs. Keep this file useful as project history, but prefer the
+manifest, README, and CI workflow when they conflict with older milestone
+notes below.
 
 ## Pivot context (60 seconds)
 
@@ -38,20 +45,14 @@ A pure-Harn module exposing:
 verification, anything `provider_id()`-shaped. That's
 `harn-notion-connector`.
 
-## What's blocked
+## Previously tracked dependencies
 
-- **[harn#345 (Package management v0)](https://github.com/burin-labs/harn/issues/345)** —
-  v0 release of *this* repo is gated on package management. The user has
-  explicitly stated they want to ship a really really solid package
-  manager before shipping dependent libraries; file-relative imports feel
-  like a hack and aren't a long-term distribution path. Develop in
-  parallel using `path = "../harn-openapi"` but **do not cut a v0.1.0
-  release tag until #345 lands**.
-- **[harn#346 (Connector interface contract)](https://github.com/burin-labs/harn/issues/346)** —
-  not directly blocking this repo (no connector interface here), but
-  worth tracking because `harn-notion-connector` will consume this SDK
-  and call its outbound functions from inside its `call(method, args)`
-  dispatch.
+- Package management v0 has landed far enough for this repo to use
+  git-backed `harn.toml` dependencies and a package install smoke in CI.
+  Keep path dependencies local-only.
+- The connector interface contract belongs to `harn-notion-connector`.
+  This repo stays outbound-only and exposes generated Notion REST calls plus
+  helper metadata for connector consumers.
 
 ## What's unblocked
 
@@ -102,8 +103,7 @@ The codegen will eventually produce code matching this shape.
 - Extend codegen to cover `databases`, `data_sources`, `blocks`, `users`,
   `search`, `comments`. Re-run `scripts/regen.harn`.
 - Acceptance: every operation in the OpenAPI spec has a corresponding
-  generated function in `src/lib.harn`. Total count should be roughly
-  30–40 operations.
+  generated function in `src/lib.harn`.
 
 ### M4 — Pagination, errors, polish
 
@@ -161,22 +161,24 @@ The codegen will eventually produce code matching this shape.
   version="$(tr -d '[:space:]' < .harn-version)"
   cargo install harn-cli --version "$version" --locked
   harn install --locked
-  harn check src scripts
-  harn lint src scripts
-  harn fmt --check src scripts
+  harn package check
+  harn check src scripts tests
+  harn lint src scripts tests
+  harn fmt --check src scripts tests
   harn run scripts/regen.harn
+  harn run tests/recorded/notion_sdk_smoke.harn
   ```
 
 ## Definition of done for v0
 
-- [ ] `tests/fixtures/notion.openapi.json` pinned and used by all tests.
-- [ ] `scripts/regen.harn` regenerates `src/lib.harn` from the fixture.
-- [ ] All resource modules (`pages`, `databases`, `data_sources`,
+- [x] `tests/fixtures/notion.openapi.json` pinned and used by all tests.
+- [x] `scripts/regen.harn` regenerates `src/lib.harn` from the fixture.
+- [x] All resource families (`pages`, `databases`, `data_sources`,
       `blocks`, `users`, `search`, `comments`) covered by codegen.
-- [ ] Pagination helper + `_all` variants on every list-style endpoint.
-- [ ] `NotionError` normalization for all non-2xx responses.
-- [ ] 3–5 recorded tests covering happy path, 404, 429, paginated query.
-- [ ] README usage example matches the actual surface.
-- [ ] **No v0.1.0 tag cut until [harn#345](https://github.com/burin-labs/harn/issues/345)
-      lands and `harn add github.com/burin-labs/notion-sdk-harn` works
-      end-to-end through the registry.**
+- [x] Pagination helper for list-style endpoints.
+- [x] `NotionError` normalization for non-2xx responses.
+- [x] Recorded tests cover happy path, 404, 429, paginated query, dynamic
+      token providers, Basic auth, request IDs, and version overrides.
+- [x] README usage example matches the actual generated surface.
+- [x] `harn add github.com/burin-labs/notion-sdk-harn` works in the package
+      install smoke path.

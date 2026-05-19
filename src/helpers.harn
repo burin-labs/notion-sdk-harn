@@ -1,10 +1,9 @@
 // notion-sdk-harn helpers — pagination + structured error handling.
 //
-// The generated `src/lib.harn` throws on non-2xx responses with a string
-// shaped `"<fn_name>: HTTP <status> <body>"`. This module decodes those
-// strings into a structured NotionError dict and supplies a small
-// `paginate` helper that walks Notion's `next_cursor` / `has_more`
-// convention for any list-style endpoint.
+// Generated SDK calls throw structured response dicts on non-2xx responses.
+// Older generated artifacts threw `"<fn_name>: HTTP <status> <body>"` strings,
+// so `decode_thrown` still accepts both shapes. This module also supplies
+// small pagination helpers for Notion's `next_cursor` / `has_more` convention.
 /**
  * Decode a thrown value (string or dict) from a generated SDK call into a
  * NotionError dict shaped:
@@ -20,13 +19,12 @@
  *
  * Accepts:
  *   - the canonical generator string `"fn_name: HTTP <status> <body>"`
- *   - a dict (forward-compatible with a future structured-throw codegen)
+ *   - a dict (current structured-throw codegen)
  *   - any other value, in which case `code` is `"transport_error"` and
  *     `message` is the value's string form.
  *
- * `request_id` is empty until the codegen propagates response headers
- * into thrown values; the dict path will populate it from
- * `x-request-id` / `request-id` once available.
+ * `request_id` is populated from `x-request-id` / `request-id` headers
+ * when the thrown value includes response headers.
  */
 pub fn decode_thrown(thrown) -> dict {
   if type_of(thrown) == "dict" {
