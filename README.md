@@ -108,7 +108,7 @@ if is_err(result) {
   //   status: 404,
   //   code: "object_not_found",
   //   message: "Could not find page with ID: …",
-  //   request_id: "",            // populated once codegen forwards headers
+  //   request_id: "req_...",      // from x-request-id when present
   //   body: "{...raw body...}",
   //   operation: "retrieve_a_page",
   // }
@@ -123,7 +123,7 @@ following the Notion
 ## Supported endpoints
 
 The package re-exports every operation in the pinned Notion OpenAPI document
-(70 operations across the resource families below). Names are snake_case
+(46 operations across the resource families below). Names are snake_case
 versions of the Notion `operationId`s; argument lists follow the spec's
 parameter order with optional parameters defaulted to `nil`.
 
@@ -167,8 +167,8 @@ from `https://developers.notion.com/openapi.json` and regenerate.
 
 ## API-version pin
 
-`new_client` does not pin `Notion-Version` for you. Always pass it via
-`extra_headers`:
+`new_client` defaults `Notion-Version` to `2022-06-28`. You can pin a
+different default through `extra_headers`:
 
 ```harn
 let client = new_client(
@@ -179,11 +179,14 @@ let client = new_client(
 )
 ```
 
-The codegen emits `2022-06-28` as a stable default in the generated
-`new_client` signature. Pin to a newer version (for example
-`"2026-03-11"`, used by `harn-notion-connector`) when an endpoint requires
-a newer dialect — Notion guarantees backward compatibility within a major
-version per its
+Generated operations also accept an optional trailing `notion_version`
+argument for one-off calls that need a newer dialect:
+
+```harn
+let page = retrieve_a_page(client, "abc123...", nil, "2026-03-11")
+```
+
+Notion guarantees backward compatibility within a major version per its
 [versioning policy](https://developers.notion.com/reference/versioning).
 
 The pinned upstream OpenAPI snapshot lives at
@@ -210,9 +213,10 @@ To refresh the upstream Notion OpenAPI fixture:
 curl -fsSL https://developers.notion.com/openapi.json \
   > tests/fixtures/notion.openapi.json
 harn run scripts/regen.harn -- --apply
-harn check src scripts
-harn lint src scripts
-harn fmt --check src scripts
+harn package check
+harn check src scripts tests
+harn lint src scripts tests
+harn fmt --check src scripts tests
 harn run scripts/regen.harn
 harn run tests/recorded/notion_sdk_smoke.harn
 ```
@@ -225,6 +229,7 @@ Install the pinned Harn CLI from crates.io and resolve package dependencies:
 version="$(tr -d '[:space:]' < .harn-version)"
 cargo install harn-cli --version "$version" --locked
 harn install --locked
+harn package check
 harn check src scripts tests
 harn lint src scripts tests
 harn fmt --check src scripts tests

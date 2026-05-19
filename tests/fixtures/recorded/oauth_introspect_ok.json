@@ -1,0 +1,6 @@
+{
+  "active": true,
+  "scope": "read_content insert_content",
+  "iat": 1710000000,
+  "request_id": "req-oauth-introspect"
+}

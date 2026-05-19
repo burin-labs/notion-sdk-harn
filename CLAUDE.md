@@ -23,10 +23,12 @@ Install the pinned Harn CLI from crates.io and run the local gate:
 version="$(tr -d '[:space:]' < .harn-version)"
 cargo install harn-cli --version "$version" --locked
 harn install --locked
-harn check src scripts
-harn lint src scripts
-harn fmt --check src scripts
+harn package check
+harn check src scripts tests
+harn lint src scripts tests
+harn fmt --check src scripts tests
 harn run scripts/regen.harn
+harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
 Live integration tests need a `NOTION_TOKEN` env var pointed at a sandbox
