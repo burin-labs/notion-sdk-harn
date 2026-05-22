@@ -249,6 +249,13 @@ suite uses the stdlib `http_mock` runtime; CI makes no live Notion HTTP calls.
 Live integration tests behind `NOTION_TOKEN` are welcome but not required;
 keep them out of CI.
 
+## Releases
+
+Tagged releases are listed on the
+[GitHub Releases page](https://github.com/burin-labs/notion-sdk-harn/releases)
+and summarised in [CHANGELOG.md](./CHANGELOG.md). The package-index entry in
+`burin-labs/harn-cloud` is updated by a PR on each release.
+
 ## License
 
 Dual-licensed under MIT and Apache-2.0.
