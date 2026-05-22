@@ -5,9 +5,8 @@ Harn. The source is generated from
 [Notion's OpenAPI 3.1 spec](https://developers.notion.com/openapi.json) via
 [harn-openapi](https://github.com/burin-labs/harn-openapi).
 
-> **Status: pre-1.0** — actively developed in tandem with
-> [burin-labs/harn](https://github.com/burin-labs/harn). See the
-> [Pure-Harn Connectors Pivot epic #350](https://github.com/burin-labs/harn/issues/350).
+> **Status: pre-1.0.** The SDK tracks the current Harn 0.8 package workflow
+> and the pinned Notion OpenAPI snapshot in this repo.
 
 This SDK covers **outbound** API calls only. For inbound webhook handling,
 see [harn-notion-connector](https://github.com/burin-labs/harn-notion-connector),
@@ -20,8 +19,8 @@ harn add github.com/burin-labs/notion-sdk-harn
 ```
 
 That publishable path resolves this package and its generator/runtime helper
-dependencies from `harn.toml`; it does not require sibling checkouts. Pin a
-specific version in production:
+dependencies from `harn.toml`; it does not require sibling checkouts. Pin a tag
+when you need reproducible installs:
 
 ```sh
 harn add github.com/burin-labs/notion-sdk-harn@v0.1.0
@@ -79,7 +78,9 @@ for row in paginate(
 }
 
 // Or collect every row eagerly
-let all_rows = collect_all(fn(args) { return post_database_query(client, "def456...", args) })
+let all_rows = collect_all(
+  fn(args) { return post_database_query(client, "def456...", args) },
+)
 
 // Create a comment using a typed variant constructor
 import { create_a_comment, create_a_comment_variant1 } from "notion-sdk-harn"
@@ -107,7 +108,7 @@ if is_err(result) {
   // err == {
   //   status: 404,
   //   code: "object_not_found",
-  //   message: "Could not find page with ID: …",
+  //   message: "Could not find page with ID: ...",
   //   request_id: "req_...",      // from x-request-id when present
   //   body: "{...raw body...}",
   //   operation: "retrieve_a_page",
@@ -149,17 +150,17 @@ with the [`paginate`](src/helpers.harn) helper.
 The full machine-readable inventory ships in `src/lib.harn`'s
 `pagination_plans()` and `rate_limit_metadata()` exports.
 
-## Unsupported / out-of-scope endpoints
+## Unsupported endpoints
 
-The following Notion surfaces are **deliberately not in this package**:
+The following Notion surfaces are not in this package:
 
 - **Inbound webhook delivery and verification.** Webhook subscription
   management lives in the Notion integration UI, not the public REST API.
-  Webhook receivers — payload verification, normalization, dispatch —
+  Webhook receivers, including payload verification, normalization, and dispatch,
   belong in [harn-notion-connector](https://github.com/burin-labs/harn-notion-connector).
 - **Operations the upstream OpenAPI doesn't describe.** If Notion adds a new
-  endpoint, refresh the fixture and regenerate (see below) — do not
-  hand-write a one-off wrapper here.
+  endpoint, refresh the fixture and regenerate as described below. Do not
+  hand-write one-off wrappers here.
 - **Streaming / long-poll endpoints.** None exist in the current Notion API.
 
 If you hit a missing operation, refresh `tests/fixtures/notion.openapi.json`
@@ -239,7 +240,7 @@ harn run tests/recorded/notion_sdk_smoke.harn
 
 CI uses the same `.harn-version` pin, installing `harn-cli` from crates.io
 instead of relying on an ambient sibling checkout. The `tests/recorded/`
-suite uses the stdlib `http_mock` runtime — no live HTTP traffic in CI.
+suite uses the stdlib `http_mock` runtime; CI makes no live Notion HTTP calls.
 Live integration tests behind `NOTION_TOKEN` are welcome but not required;
 keep them out of CI.
 

@@ -1,9 +1,10 @@
-// notion-sdk-harn helpers — pagination + structured error handling.
+// notion-sdk-harn helpers: pagination and structured error handling.
 //
 // Generated SDK calls throw structured response dicts on non-2xx responses.
-// Older generated artifacts threw `"<fn_name>: HTTP <status> <body>"` strings,
-// so `decode_thrown` still accepts both shapes. This module also supplies
-// small pagination helpers for Notion's `next_cursor` / `has_more` convention.
+// `decode_thrown` also accepts plain string throws so transport failures and
+// raw generator errors have the same NotionError shape at call sites. This
+// module also supplies small pagination helpers for Notion's `next_cursor` /
+// `has_more` convention.
 /**
  * Decode a thrown value (string or dict) from a generated SDK call into a
  * NotionError dict shaped:
