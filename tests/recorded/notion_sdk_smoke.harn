@@ -26,27 +26,29 @@ let TOKEN = "secret_test_token"
 
 let NOTION_VERSION = "2022-06-28"
 
-let PAGE_OK_PATH = "tests/fixtures/recorded/page_retrieve_ok.json"
+let FIXTURE_DIR = source_dir() + "/../fixtures/recorded"
 
-let PAGE_404_PATH = "tests/fixtures/recorded/page_retrieve_404.json"
+let PAGE_OK_PATH = FIXTURE_DIR + "/page_retrieve_ok.json"
 
-let DS_QUERY_PAGE_1_PATH = "tests/fixtures/recorded/data_source_query_page_1.json"
+let PAGE_404_PATH = FIXTURE_DIR + "/page_retrieve_404.json"
 
-let DS_QUERY_PAGE_2_PATH = "tests/fixtures/recorded/data_source_query_page_2.json"
+let DS_QUERY_PAGE_1_PATH = FIXTURE_DIR + "/data_source_query_page_1.json"
 
-let DS_QUERY_429_PATH = "tests/fixtures/recorded/data_source_query_429.json"
+let DS_QUERY_PAGE_2_PATH = FIXTURE_DIR + "/data_source_query_page_2.json"
 
-let DS_TEMPLATES_PAGE_1_PATH = "tests/fixtures/recorded/data_source_templates_page_1.json"
+let DS_QUERY_429_PATH = FIXTURE_DIR + "/data_source_query_429.json"
 
-let DS_TEMPLATES_PAGE_2_PATH = "tests/fixtures/recorded/data_source_templates_page_2.json"
+let DS_TEMPLATES_PAGE_1_PATH = FIXTURE_DIR + "/data_source_templates_page_1.json"
 
-let COMMENT_OK_PATH = "tests/fixtures/recorded/comment_create_ok.json"
+let DS_TEMPLATES_PAGE_2_PATH = FIXTURE_DIR + "/data_source_templates_page_2.json"
 
-let USERS_PAGE_1_PATH = "tests/fixtures/recorded/users_list_page_1.json"
+let COMMENT_OK_PATH = FIXTURE_DIR + "/comment_create_ok.json"
 
-let USERS_PAGE_2_PATH = "tests/fixtures/recorded/users_list_page_2.json"
+let USERS_PAGE_1_PATH = FIXTURE_DIR + "/users_list_page_1.json"
 
-let OAUTH_INTROSPECT_OK_PATH = "tests/fixtures/recorded/oauth_introspect_ok.json"
+let USERS_PAGE_2_PATH = FIXTURE_DIR + "/users_list_page_2.json"
+
+let OAUTH_INTROSPECT_OK_PATH = FIXTURE_DIR + "/oauth_introspect_ok.json"
 
 fn fixture_client() {
   return new_client(BASE_URL, TOKEN, nil, "", "", nil, {"Notion-Version": NOTION_VERSION})
@@ -78,6 +80,28 @@ pipeline default() {
   expect_eq(calls[0].method, "GET", "GET method")
   expect_eq(calls[0].headers.authorization, "Bearer " + TOKEN, "bearer token applied")
   expect_eq(calls[0].headers.get("notion-version"), NOTION_VERSION, "notion-version header pinned")
+  // ---------------------------------------------------------------
+  // users.list: safe GET calls use shared connector retry policy
+  // ---------------------------------------------------------------
+  http_mock_clear()
+  http_mock(
+    "GET",
+    BASE_URL + "/v1/users*",
+    {
+      responses: [
+        {status: 503, body: "{\"code\":\"service_unavailable\",\"message\":\"busy\"}", headers: {}},
+        {
+          status: 200,
+          body: fixture_body(harness, USERS_PAGE_1_PATH),
+          headers: {"x-request-id": "req-users-retry"},
+        },
+      ],
+    },
+  )
+  let retried_users = get_users(client, nil, 2)
+  expect_eq(len(retried_users.results), 2, "safe GET retry returns list payload")
+  let retried_user_calls = http_mock_calls()
+  expect_eq(len(retried_user_calls), 2, "safe GET retried once before success")
   // ---------------------------------------------------------------
   // client plumbing: provider tokens, base URL joins, version override
   // ---------------------------------------------------------------
@@ -140,6 +164,26 @@ pipeline default() {
   expect_eq(err_404.request_id, "req-404", "decoded request id from response headers")
   expect_eq(err_404.operation, "retrieve_a_page", "decoded operation name")
   // ---------------------------------------------------------------
+  // retrieve_a_page: invalid JSON uses the shared parse-error envelope
+  // ---------------------------------------------------------------
+  http_mock_clear()
+  http_mock(
+    "GET",
+    BASE_URL + "/v1/pages/" + page_id,
+    {status: 200, body: "not json", headers: {"x-request-id": "req-invalid-json"}},
+  )
+  let invalid_json = try {
+    retrieve_a_page(client, page_id)
+  }
+  expect(is_err(invalid_json), "invalid JSON returns Err")
+  let invalid_json_raw = unwrap_err(invalid_json)
+  expect_eq(invalid_json_raw.category, "invalid_json", "raw invalid JSON category")
+  expect_eq(invalid_json_raw.status, 200, "raw invalid JSON status")
+  expect_eq(invalid_json_raw.operation, "retrieve_a_page", "raw invalid JSON operation")
+  let err_invalid_json = decode_thrown(invalid_json_raw)
+  expect_eq(err_invalid_json.code, "invalid_json", "decoded invalid JSON category")
+  expect_eq(err_invalid_json.status, 200, "decoded invalid JSON status")
+  // ---------------------------------------------------------------
   // data_sources.query: paginated walk via paginate(...)
   // ---------------------------------------------------------------
   http_mock_clear()
@@ -197,7 +241,15 @@ pipeline default() {
     post_database_query(client, ds_id, {})
   }
   expect(is_err(throttled), "429 returns Err")
-  let err_429 = decode_thrown(unwrap_err(throttled))
+  let throttled_raw = unwrap_err(throttled)
+  expect_eq(throttled_raw.retry_after_ms, 5000, "Retry-After surfaced as milliseconds")
+  expect_eq(
+    throttled_raw.rate_limit.retry_after_ms,
+    5000,
+    "Retry-After surfaced in rate-limit metadata",
+  )
+  expect_eq(throttled_raw.rate_limit.retry_after, "5", "raw Retry-After header surfaced")
+  let err_429 = decode_thrown(throttled_raw)
   expect_eq(err_429.status, 429, "decoded 429 status")
   expect_eq(err_429.code, "rate_limited", "decoded Notion rate_limited code")
   expect_eq(err_429.operation, "post_database_query", "decoded operation name")
@@ -213,6 +265,37 @@ pipeline default() {
   expect_eq(envelope_only.code, "invalid_json", "body error code wins over connector category")
   expect_eq(envelope_only.message, "Malformed body", "body error message decoded from envelope")
   expect_eq(envelope_only.request_id, "req-body", "body request id used when headers are absent")
+  // ---------------------------------------------------------------
+  // comments.create: unsafe write calls do not retry without idempotency
+  // ---------------------------------------------------------------
+  http_mock_clear()
+  http_mock(
+    "POST",
+    BASE_URL + "/v1/comments",
+    {
+      responses: [
+        {status: 503, body: "{\"code\":\"service_unavailable\",\"message\":\"busy\"}", headers: {}},
+        {
+          status: 200,
+          body: fixture_body(harness, COMMENT_OK_PATH),
+          headers: {"x-request-id": "req-comment-retry"},
+        },
+      ],
+    },
+  )
+  let no_retry_body = create_a_comment_variant1(
+    {type: "page_id", page_id: page_id},
+    [{type: "text", text: {content: "No retry without idempotency"}}],
+  )
+  let no_retry = try {
+    create_a_comment(client, no_retry_body)
+  }
+  expect(is_err(no_retry), "write without idempotency key returns the first failure")
+  let no_retry_raw = unwrap_err(no_retry)
+  expect_eq(no_retry_raw.status, 503, "write without idempotency keeps first status")
+  expect_eq(no_retry_raw.category, "overloaded", "write without idempotency keeps connector category")
+  let no_retry_calls = http_mock_calls()
+  expect_eq(len(no_retry_calls), 1, "write without idempotency is not retried")
   // ---------------------------------------------------------------
   // comments.create: variant1 (parent + rich_text)
   // ---------------------------------------------------------------
