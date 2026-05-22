@@ -1,51 +1,59 @@
-# AGENTS.md — notion-sdk-harn
+# AGENTS.md
 
-**Read [SESSION_PROMPT.md](./SESSION_PROMPT.md) first.** It contains the
-pivot context, dependency on `harn-openapi`, what's blocked on package
-management, and the v0 milestones.
+This repo is the pure-Harn outbound Notion REST SDK. When docs disagree, prefer
+`README.md`, `harn.toml`, and `.github/workflows/ci.yml`.
 
-## Quick repo conventions
+## Repo facts
 
-- File extension: `.harn`. Use `snake_case` for filenames.
+- `src/lib.harn` is generated from `tests/fixtures/notion.openapi.json` through
+  `harn-openapi`.
+- Fix generated behavior in `harn-openapi` or the pinned OpenAPI fixture, then
+  run `scripts/regen.harn`. Do not hand-edit `src/lib.harn`.
+- Hand-maintained code lives in `src/helpers.harn`, `scripts/regen.harn`, and
+  `tests/`.
+- Inbound webhook handling belongs in `harn-notion-connector`, not this SDK.
+
+## Naming and layout
+
+- Harn filenames use `snake_case` and the `.harn` extension.
 - Repo directories use `kebab-case`.
-- Entry point: `src/lib.harn` (codegen output — usually edit the generator,
-  not the generated file).
-- Codegen entry: `scripts/regen.harn`.
-- Tests live under `tests/`. Recorded HTTP fixtures live under
-  `tests/fixtures/recorded/` (use `http_mock` to replay).
-- Pinned upstream OpenAPI snapshot: `tests/fixtures/notion.openapi.json`.
+- Recorded HTTP fixtures live under `tests/fixtures/recorded/` and replay with
+  `http_mock`.
+- The pinned upstream Notion OpenAPI snapshot is
+  `tests/fixtures/notion.openapi.json`.
 
-## How to test
+## Local gate
 
-Install the pinned Harn CLI from crates.io and run the local gate:
+Install the pinned Harn CLI from crates.io, then run the same checks CI runs:
 
 ```sh
-cargo install harn-cli --version "$(cat .harn-version)" --locked
-harn install
-harn check src scripts
-harn lint src scripts
-harn fmt --check src scripts
+version="$(tr -d '[:space:]' < .harn-version)"
+cargo install harn-cli --version "$version" --locked
+harn install --locked
+harn package check
+harn check src scripts tests
+harn lint src scripts tests
+harn fmt --check src scripts tests
 harn run scripts/regen.harn
+harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
-Live integration tests need a `NOTION_TOKEN` env var pointed at a sandbox
-workspace. Recorded tests don't.
+Recorded tests do not make live HTTP calls. Live integration work needs a
+`NOTION_TOKEN` for a sandbox workspace and should stay out of CI.
 
-## Sibling repo
+## Multi-repo work
 
-The codegen library is a git dependency on `harn-openapi`. For local
-multi-repo development, temporarily switch that dependency to a path checkout
-and switch it back before publishing a package PR.
+`harn-openapi` is pinned as a git dependency in `harn.toml` and `harn.lock`.
+For local generator work, you may temporarily switch it to a sibling path
+checkout such as `../harn-openapi`; restore the git pin before committing or
+opening a package PR.
 
-## Upstream conventions
+For general Harn conventions, use
+[`/Users/ksinder/projects/harn/AGENTS.md`](/Users/ksinder/projects/harn/AGENTS.md)
+when that checkout is available.
 
-For general Harn coding conventions and project layout, defer to
-[`/Users/ksinder/projects/harn/AGENTS.md`](/Users/ksinder/projects/harn/AGENTS.md).
+## Avoid
 
-## Don't
-
-- Don't hand-edit `src/lib.harn` to fix a generated bug — fix the
-  generator in `../harn-openapi` and re-run `scripts/regen.harn`.
-- Don't add inbound webhook handling here. That belongs in
-  `harn-notion-connector`.
-- Don't hand-edit `LICENSE-*` or `.gitignore`.
+- Committing live Notion tokens, request IDs, workspace data, or unredacted
+  fixtures.
+- Editing `LICENSE-*` or `.gitignore` unless the task explicitly requires it.
