@@ -21,6 +21,7 @@ let OUTPUT_PATH = "src/lib.harn"
 let CODEGEN_OPTIONS = {
   module_name: "notion",
   client_name: "NotionClient",
+  transport: "connector_policy",
   default_base_url: "https://api.notion.com",
   header_overrides: {"Notion-Version": "2022-06-28"},
 }

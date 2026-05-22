@@ -207,6 +207,11 @@ This reads the pinned `tests/fixtures/notion.openapi.json` and rewrites
 The current generator ref is the `harn-openapi` revision pinned in
 `harn.toml` and `harn.lock`. The second command is the drift check used by CI:
 it exits non-zero when the committed SDK output is missing or stale.
+The generated SDK opts into the shared Harn connector HTTP policy transport:
+safe/idempotent operations use bounded retries, unsafe writes do not retry
+unless the OpenAPI operation exposes an `Idempotency-Key` parameter, and
+connector envelopes carry standardized retry, rate-limit, and JSON parse
+errors for callers that catch thrown responses.
 
 To refresh the upstream Notion OpenAPI fixture:
 
