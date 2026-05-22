@@ -3,6 +3,8 @@
  * Source doc: Notion API (OpenAPI 3.1.0)
  * Module:     notion
  */
+import { connector_http_json } from "std/connectors/shared"
+
 type GetBlockChildrenResponse = {
   block: dict,
   has_more: bool,
@@ -379,9 +381,12 @@ pub fn rate_limit_from_response(resp: dict) -> dict {
   return {
     status: resp.get("status"),
     retry_after: _header_ci(headers, "Retry-After"),
-    limit: _header_ci(headers, "X-RateLimit-Limit"),
-    remaining: _header_ci(headers, "X-RateLimit-Remaining"),
-    reset: _header_ci(headers, "X-RateLimit-Reset"),
+    limit: _header_ci(headers, "RateLimit-Limit")
+      ?? _header_ci(headers, "X-RateLimit-Limit"),
+    remaining: _header_ci(headers, "RateLimit-Remaining")
+      ?? _header_ci(headers, "X-RateLimit-Remaining"),
+    reset: _header_ci(headers, "RateLimit-Reset")
+      ?? _header_ci(headers, "X-RateLimit-Reset"),
   }
 }
 
@@ -452,11 +457,20 @@ pub fn retrieve_a_block(client: dict, block_id, notion_version = nil) -> any {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_a_block", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_a_block",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Delete a block */
@@ -468,11 +482,20 @@ pub fn delete_a_block(client: dict, block_id, notion_version = nil) -> any {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_delete(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "delete_a_block", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "DELETE",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "delete_a_block",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Update a block */
@@ -496,11 +519,21 @@ pub fn update_a_block(client: dict, block_id, body, notion_version = nil) -> any
     throw "update_a_block: unknown request body variant " + to_string(body_variant)
   }
   let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_a_block", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_a_block",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Build a `Variant1` variant of the polymorphic request body. */
@@ -534,11 +567,20 @@ pub fn get_block_children(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "get_block_children", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "get_block_children",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_block_children: expected dict response, got " + type_of(raw)
   }
@@ -555,11 +597,21 @@ pub fn patch_block_children(client: dict, block_id, body, notion_version = nil) 
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "patch_block_children", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "patch_block_children",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "patch_block_children: expected dict response, got " + type_of(raw)
   }
@@ -583,11 +635,15 @@ pub fn list_comments(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "list_comments", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {headers: request_headers, provider: "notion", operation: "list_comments", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_comments: expected dict response, got " + type_of(raw)
   }
@@ -615,11 +671,21 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
     throw "create_a_comment: unknown request body variant " + to_string(body_variant)
   }
   let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_a_comment", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_a_comment",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Build a `Variant1` variant of the polymorphic request body. */
@@ -655,11 +721,20 @@ pub fn retrieve_comment(client: dict, comment_id, notion_version = nil) -> any {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_comment", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_comment",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Delete a comment */
@@ -671,11 +746,20 @@ pub fn delete_a_comment(client: dict, comment_id, notion_version = nil) -> any {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_delete(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "delete_a_comment", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "DELETE",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "delete_a_comment",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Update a comment */
@@ -699,11 +783,21 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
     throw "update_a_comment: unknown request body variant " + to_string(body_variant)
   }
   let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_a_comment", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_a_comment",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Build a `Variant1` variant of the polymorphic request body. */
@@ -735,11 +829,20 @@ pub fn list_custom_emojis(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "list_custom_emojis", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "list_custom_emojis",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_custom_emojis: expected dict response, got " + type_of(raw)
   }
@@ -756,11 +859,21 @@ pub fn create_a_database(client: dict, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_a_database", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_a_database",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a data source */
@@ -772,11 +885,20 @@ pub fn retrieve_a_data_source(client: dict, data_source_id, notion_version = nil
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_a_data_source", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_a_data_source",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Update a data source */
@@ -789,11 +911,21 @@ pub fn update_a_data_source(client: dict, data_source_id, body, notion_version =
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_a_data_source", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_a_data_source",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Query a data source */
@@ -814,11 +946,21 @@ pub fn post_database_query(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "post_database_query", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "post_database_query",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "post_database_query: expected dict response, got " + type_of(raw)
   }
@@ -843,16 +985,20 @@ pub fn list_data_source_templates(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
       operation: "list_data_source_templates",
-      status: resp.status,
-      body: resp.body,
-      headers: resp.headers,
-    }
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_data_source_templates: expected dict response, got " + type_of(raw)
   }
@@ -869,11 +1015,21 @@ pub fn create_database(client: dict, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_database", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_database",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a database */
@@ -885,11 +1041,20 @@ pub fn retrieve_database(client: dict, database_id, notion_version = nil) -> any
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_database", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_database",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Update a database */
@@ -902,11 +1067,21 @@ pub fn update_database(client: dict, database_id, body, notion_version = nil) ->
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_database", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_database",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** List file uploads */
@@ -926,11 +1101,20 @@ pub fn list_file_uploads(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "list_file_uploads", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "list_file_uploads",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_file_uploads: expected dict response, got " + type_of(raw)
   }
@@ -947,11 +1131,21 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_file", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_file",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_file: expected dict response, got " + type_of(raw)
   }
@@ -967,11 +1161,20 @@ pub fn retrieve_file_upload(client: dict, file_upload_id, notion_version = nil) 
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_file_upload", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_file_upload",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "retrieve_file_upload: expected dict response, got " + type_of(raw)
   }
@@ -987,11 +1190,20 @@ pub fn complete_file_upload(client: dict, file_upload_id, notion_version = nil) 
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_post(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "complete_file_upload", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "complete_file_upload",
+      retry: {max_attempts: 1},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "complete_file_upload: expected dict response, got " + type_of(raw)
   }
@@ -1008,11 +1220,21 @@ pub fn upload_file(client: dict, file_upload_id, body, notion_version = nil) -> 
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "upload_file", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "upload_file",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "upload_file: expected dict response, got " + type_of(raw)
   }
@@ -1029,11 +1251,21 @@ pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectT
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "introspect_token", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "introspect_token",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "introspect_token: expected dict response, got " + type_of(raw)
   }
@@ -1050,11 +1282,21 @@ pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResp
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "revoke_token", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "revoke_token",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "revoke_token: expected dict response, got " + type_of(raw)
   }
@@ -1082,11 +1324,21 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
     throw "create_a_token: unknown request body variant " + to_string(body_variant)
   }
   let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_a_token", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_a_token",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_a_token: expected dict response, got " + type_of(raw)
   }
@@ -1121,11 +1373,21 @@ pub fn post_page(client: dict, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "post_page", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "post_page",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a page */
@@ -1139,11 +1401,20 @@ pub fn retrieve_a_page(client: dict, page_id, filter_properties = nil, notion_ve
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_a_page", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_a_page",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Update page */
@@ -1156,11 +1427,21 @@ pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "patch_page", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "patch_page",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a page as markdown */
@@ -1174,11 +1455,20 @@ pub fn retrieve_page_markdown(client: dict, page_id, include_transcript = nil, n
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_page_markdown", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_page_markdown",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "retrieve_page_markdown: expected dict response, got " + type_of(raw)
   }
@@ -1206,11 +1496,21 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
     throw "update_page_markdown: unknown request body variant " + to_string(body_variant)
   }
   let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_page_markdown", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_page_markdown",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "update_page_markdown: expected dict response, got " + type_of(raw)
   }
@@ -1255,11 +1555,21 @@ pub fn move_page(client: dict, page_id, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "move_page", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "move_page",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a page property item */
@@ -1280,11 +1590,20 @@ pub fn retrieve_a_page_property(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_a_page_property", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_a_page_property",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Search by title */
@@ -1297,11 +1616,21 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "post_search", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "post_search",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "post_search: expected dict response, got " + type_of(raw)
   }
@@ -1319,11 +1648,15 @@ pub fn get_users(client: dict, start_cursor = nil, page_size = nil, notion_versi
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "get_users", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {headers: request_headers, provider: "notion", operation: "get_users", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_users: expected dict response, got " + type_of(raw)
   }
@@ -1339,11 +1672,15 @@ pub fn get_self(client: dict, notion_version = nil) -> UserObjectResponse {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "get_self", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {headers: request_headers, provider: "notion", operation: "get_self", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_self: expected dict response, got " + type_of(raw)
   }
@@ -1359,11 +1696,15 @@ pub fn get_user(client: dict, user_id, notion_version = nil) -> UserObjectRespon
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "get_user", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {headers: request_headers, provider: "notion", operation: "get_user", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_user: expected dict response, got " + type_of(raw)
   }
@@ -1393,11 +1734,15 @@ pub fn list_views(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "list_views", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {headers: request_headers, provider: "notion", operation: "list_views", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_views: expected dict response, got " + type_of(raw)
   }
@@ -1414,11 +1759,21 @@ pub fn create_view(client: dict, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_view", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_view",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Retrieve a view */
@@ -1430,11 +1785,20 @@ pub fn retrieve_a_view(client: dict, view_id, notion_version = nil) -> any {
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "retrieve_a_view", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "retrieve_a_view",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Delete a view */
@@ -1446,11 +1810,15 @@ pub fn delete_view(client: dict, view_id, notion_version = nil) -> PartialDataSo
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_delete(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "delete_view", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "DELETE",
+    url,
+    {headers: request_headers, provider: "notion", operation: "delete_view", retry: {max_attempts: 3}},
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "delete_view: expected dict response, got " + type_of(raw)
   }
@@ -1467,11 +1835,21 @@ pub fn update_a_view(client: dict, view_id, body, notion_version = nil) -> any {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_patch(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "update_a_view", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "PATCH",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "update_a_view",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  return json_parse(resp.body)
+  return resp.json
 }
 
 /** Create a view query */
@@ -1484,11 +1862,21 @@ pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> V
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   let body_str = json_stringify(body)
-  let resp = http_post(url, body_str, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "create_view_query", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "POST",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "create_view_query",
+      retry: {max_attempts: 1},
+      body: body_str,
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_view_query: expected dict response, got " + type_of(raw)
   }
@@ -1513,11 +1901,20 @@ pub fn get_view_query_results(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_get(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "get_view_query_results", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "GET",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "get_view_query_results",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_view_query_results: expected dict response, got " + type_of(raw)
   }
@@ -1533,11 +1930,20 @@ pub fn delete_view_query(client: dict, view_id, query_id, notion_version = nil) 
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = http_delete(url, {headers: request_headers})
-  if resp.status >= 400 {
-    throw {operation: "delete_view_query", status: resp.status, body: resp.body, headers: resp.headers}
+  let resp = connector_http_json(
+    "DELETE",
+    url,
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "delete_view_query",
+      retry: {max_attempts: 3},
+    },
+  )
+  if !(resp.ok ?? false) {
+    throw resp
   }
-  let raw = json_parse(resp.body)
+  let raw = resp.json
   if type_of(raw) != "dict" {
     throw "delete_view_query: expected dict response, got " + type_of(raw)
   }

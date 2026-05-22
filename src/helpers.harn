@@ -1,10 +1,10 @@
 // notion-sdk-harn helpers: pagination and structured error handling.
 //
-// Generated SDK calls throw structured response dicts on non-2xx responses.
-// `decode_thrown` also accepts plain string throws so transport failures and
-// raw generator errors have the same NotionError shape at call sites. This
-// module also supplies small pagination helpers for Notion's `next_cursor` /
-// `has_more` convention.
+// Generated SDK calls throw shared connector error envelopes on non-2xx
+// responses. `decode_thrown` also accepts plain string throws so transport
+// failures and legacy raw-generator errors have the same NotionError shape at
+// call sites. This module also supplies small pagination helpers for Notion's
+// `next_cursor` / `has_more` convention.
 /**
  * Decode a thrown value (string or dict) from a generated SDK call into a
  * NotionError dict shaped:
@@ -20,7 +20,7 @@
  *
  * Accepts:
  *   - the canonical generator string `"fn_name: HTTP <status> <body>"`
- *   - a dict (current structured-throw codegen)
+ *   - a dict (shared connector envelope or structured response throw)
  *   - any other value, in which case `code` is `"transport_error"` and
  *     `message` is the value's string form.
  *
@@ -69,12 +69,43 @@ fn _from_dict(value: dict) -> dict {
   } else {
     {}
   }
+  let error = if type_of(value.get("error")) == "dict" {
+    value.get("error")
+  } else {
+    {}
+  }
+  let body_text = to_string(value.get("body") ?? "")
+  let payload_dict = _safe_parse_dict(body_text)
+  let fallback_message = if body_text != "" {
+    body_text
+  } else {
+    to_string(value)
+  }
   return {
     status: status,
-    code: to_string(value.get("code") ?? _default_code_for_status(status)),
-    message: to_string(value.get("message") ?? to_string(value)),
-    request_id: to_string(value.get("request_id") ?? headers.get("x-request-id") ?? headers.get("request-id") ?? ""),
-    body: to_string(value.get("body") ?? ""),
+    code: to_string(
+      payload_dict.get("code")
+        ?? value.get("code")
+        ?? error.get("code")
+        ?? value.get("category")
+        ?? error.get("category")
+        ?? _default_code_for_status(status),
+    ),
+    message: to_string(
+      payload_dict.get("message")
+        ?? value.get("message")
+        ?? error.get("message")
+        ?? fallback_message,
+    ),
+    request_id: to_string(
+      value.get("request_id")
+        ?? error.get("request_id")
+        ?? headers.get("x-request-id")
+        ?? headers.get("request-id")
+        ?? payload_dict.get("request_id")
+        ?? "",
+    ),
+    body: body_text,
     operation: to_string(value.get("operation") ?? ""),
   }
 }

@@ -7,17 +7,13 @@ protocol_artifact_version = "0.8.32"
 [[package]]
 name = "harn-openapi"
 source = "git+https://github.com/burin-labs/harn-openapi"
-rev_request = "3032c3162733d277d8a889d89e6f779401a854ac"
-commit = "3032c3162733d277d8a889d89e6f779401a854ac"
-content_hash = "sha256:c6d2506b01d7a4dbe68929d7ce4fce26ac5c4bd62a0f3928127e2ce22f0fe563"
+rev_request = "ab3e9baab793c86204c28d1383748616111f00b6"
+commit = "ab3e9baab793c86204c28d1383748616111f00b6"
+content_hash = "sha256:9b8b9affe2c8d7c33486cbfb61a09038ef54a2d36fd45ffec0f869b530fea334"
 package_version = "0.1.0"
 harn_compat = ">=0.8,<0.9"
-manifest_digest = "sha256:a6cbbbf83f83d5c33116e105dad62f6e6778f3d5e8ef26a7123d24ff00286b62"
+manifest_digest = "sha256:4e5aedfa12c6b2b373fc707dd1c6da78abcf7754bdb87307b0508acdf51288f0"
 
 [[package.exports.modules]]
 name = "default"
 path = "src/lib.harn"
-
-[[package.exports.modules]]
-name = "types"
-path = "src/types.harn"

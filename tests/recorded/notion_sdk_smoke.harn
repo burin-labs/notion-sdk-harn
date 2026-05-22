@@ -201,6 +201,18 @@ pipeline default() {
   expect_eq(err_429.status, 429, "decoded 429 status")
   expect_eq(err_429.code, "rate_limited", "decoded Notion rate_limited code")
   expect_eq(err_429.operation, "post_database_query", "decoded operation name")
+  let envelope_only = decode_thrown(
+    {
+      ok: false,
+      status: 400,
+      category: "validation_error",
+      body: "{\"code\":\"invalid_json\",\"message\":\"Malformed body\",\"request_id\":\"req-body\"}",
+      operation: "synthetic_connector_envelope",
+    },
+  )
+  expect_eq(envelope_only.code, "invalid_json", "body error code wins over connector category")
+  expect_eq(envelope_only.message, "Malformed body", "body error message decoded from envelope")
+  expect_eq(envelope_only.request_id, "req-body", "body request id used when headers are absent")
   // ---------------------------------------------------------------
   // comments.create: variant1 (parent + rich_text)
   // ---------------------------------------------------------------
