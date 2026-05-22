@@ -129,18 +129,23 @@ fn _default_code_for_status(status: int) -> string {
  *
  * The fetcher receives a dict containing the next-page cursor (under
  * `start_cursor`) and must return a Notion list response shaped
- * `{results: list, has_more: bool, next_cursor: string?}`. Initial args
- * are merged into every fetch so callers can pin filters, page sizes, or
- * sort orders that should hold across pages.
+ * `{<items_field>: list, has_more: bool, next_cursor: string?}`. Initial
+ * args are merged into every fetch so callers can pin filters, page sizes,
+ * or sort orders that should hold across pages.
  *
  * Throws from the fetcher (including non-2xx HTTP errors) propagate to
  * the consumer at the next pull.
  */
-pub gen fn paginate(fetcher, initial_args: dict = {}) -> Stream<dict> {
+pub gen fn paginate(fetcher, initial_args: dict = {}, items_field: string = "results") -> Stream<dict> {
   var args = initial_args
   while true {
     let resp = fetcher(args)
-    let items = resp.get("results") ?? []
+    let raw_items = resp.get(items_field)
+    let items = if type_of(raw_items) == "list" {
+      raw_items
+    } else {
+      []
+    }
     for item in items {
       emit item
     }
@@ -154,9 +159,9 @@ pub gen fn paginate(fetcher, initial_args: dict = {}) -> Stream<dict> {
 }
 
 /** Eager variant of `paginate` that materializes all items into a list. */
-pub fn collect_all(fetcher, initial_args: dict = {}) -> list {
+pub fn collect_all(fetcher, initial_args: dict = {}, items_field: string = "results") -> list {
   var out = []
-  for item in paginate(fetcher, initial_args) {
+  for item in paginate(fetcher, initial_args, items_field) {
     out = out + [item]
   }
   return out

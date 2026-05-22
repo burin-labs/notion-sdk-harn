@@ -1,0 +1,15 @@
+{
+  "object": "list",
+  "templates": [
+    {
+      "id": "template-1",
+      "name": "Research note"
+    },
+    {
+      "id": "template-2",
+      "name": "Bug report"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "templates-page-2"
+}
