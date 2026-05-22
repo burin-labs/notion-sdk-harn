@@ -29,65 +29,65 @@ fn _sh_quote(value: string) -> string {
   return "'" + replace(value, "'", "'\"'\"'") + "'"
 }
 
-fn _harn_cmd(args: string) -> string {
-  let bin = env("HARN_BIN")
+fn _harn_cmd(harness: Harness, args: string) -> string {
+  let bin = harness.env.get("HARN_BIN")
   if bin != nil && bin != "" {
     return _sh_quote(bin) + " " + args
   }
   return "harn " + args
 }
 
-fn _format_generated(source: string) -> string {
-  let path = temp_dir() + "/notion-sdk-harn-generated.harn"
-  write_file(path, source)
-  let result = shell(_harn_cmd("fmt " + _sh_quote(path)))
+fn _format_generated(harness: Harness, source: string) -> string {
+  let path = harness.fs.temp_dir() + "/notion-sdk-harn-generated.harn"
+  harness.fs.write_text(path, source)
+  let result = shell(_harn_cmd(harness, "fmt " + _sh_quote(path)))
   if !result.success {
     if result.stderr != "" {
-      println(result.stderr.trim())
+      harness.stdio.println(result.stderr.trim())
     }
     throw "failed to format generated output"
   }
-  return read_file(path)
+  return harness.fs.read_text(path)
 }
 
 pipeline default() {
   let apply_mode = argv.contains("--apply")
-  let raw = read_file(FIXTURE_PATH)
+  let raw = harness.fs.read_text(FIXTURE_PATH)
   let doc = parse(raw)
   let ops = operations(doc)
-  println("parsed ${doc.info.title} (OpenAPI ${doc.openapi})")
-  println("  operations: ${len(ops)}")
-  println("  schemas:    ${len(doc.components.schemas)}")
-  let generated = _format_generated(codegen_module(doc, CODEGEN_OPTIONS))
+  harness.stdio.println("parsed ${doc.info.title} (OpenAPI ${doc.openapi})")
+  harness.stdio.println("  operations: ${len(ops)}")
+  harness.stdio.println("  schemas:    ${len(doc.components.schemas)}")
+  let generated = _format_generated(harness, codegen_module(doc, CODEGEN_OPTIONS))
   let generated_lines = len(split(generated, "\n"))
-  println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
-  let current = if file_exists(OUTPUT_PATH) {
-    read_file(OUTPUT_PATH)
+  harness.stdio.println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
+  let current = if harness.fs.exists(OUTPUT_PATH) {
+    harness.fs.read_text(OUTPUT_PATH)
   } else {
     ""
   }
   if apply_mode {
-    write_file(OUTPUT_PATH, generated)
-    println("wrote ${OUTPUT_PATH} (${len(generated)} bytes)")
+    harness.fs.write_text(OUTPUT_PATH, generated)
+    harness.stdio.println("wrote ${OUTPUT_PATH} (${len(generated)} bytes)")
     if current == "" {
-      println("  (was empty)")
+      harness.stdio.println("  (was empty)")
     } else if current == generated {
-      println("  (no change)")
+      harness.stdio.println("  (no change)")
     } else {
-      println("  (replaced ${len(current)} bytes -> ${len(generated)} bytes)")
+      harness.stdio.println("  (replaced ${len(current)} bytes -> ${len(generated)} bytes)")
     }
   } else if current == generated {
-    println("${OUTPUT_PATH} is up to date.")
+    harness.stdio.println("${OUTPUT_PATH} is up to date.")
   } else if current == "" {
-    println("${OUTPUT_PATH} does not exist yet.")
-    println("Run `harn run scripts/regen.harn -- --apply` to write it.")
+    harness.stdio.println("${OUTPUT_PATH} does not exist yet.")
+    harness.stdio.println("Run `harn run scripts/regen.harn -- --apply` to write it.")
     throw "generated SDK output is missing"
   } else {
     let current_lines = len(split(current, "\n"))
-    println("${OUTPUT_PATH} differs from generator output:")
-    println("  current:    ${len(current)} bytes, ${current_lines} lines")
-    println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
-    println("Run `harn run scripts/regen.harn -- --apply` to update it.")
+    harness.stdio.println("${OUTPUT_PATH} differs from generator output:")
+    harness.stdio.println("  current:    ${len(current)} bytes, ${current_lines} lines")
+    harness.stdio.println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
+    harness.stdio.println("Run `harn run scripts/regen.harn -- --apply` to update it.")
     throw "generated SDK output is stale"
   }
 }
