@@ -1,0 +1,90 @@
+// redact_response_smoke — 2026-05-23 security sweep (F7).
+//
+// Generated operations now throw `redact_response(resp)` instead of the raw
+// HTTP envelope, so a thrown value carries neither the bearer header nor
+// oversize provider-side bodies. These tests pin that contract.
+import { decode_thrown, redact_response } from "../src/helpers"
+import { expect, expect_contains, expect_eq } from "./assertions"
+
+@test
+pipeline test_redacts_authorization_header() {
+  let resp = {
+    status: 401,
+    ok: false,
+    headers: {Authorization: "Bearer secret_xyz", "Content-Type": "application/json", "x-request-id": "req-1"},
+    body: "{\"code\":\"unauthorized\"}",
+  }
+  let safe = redact_response(resp)
+  expect_eq(safe.headers["Authorization"], "[redacted]", "Authorization must be redacted")
+  expect_eq(safe.headers["Content-Type"], "application/json", "other headers preserved")
+  expect_eq(safe.headers["x-request-id"], "req-1", "request-id preserved for diagnostics")
+  expect_eq(safe.status, 401, "status preserved")
+  expect_eq(safe.ok, false, "ok flag preserved")
+  expect_eq(safe.body, "{\"code\":\"unauthorized\"}", "small body preserved verbatim")
+  harness.stdio.println("redact authorization: ok")
+}
+
+@test
+pipeline test_redacts_other_sensitive_headers() {
+  let resp = {
+    status: 401,
+    ok: false,
+    headers: {
+      Cookie: "session=abc",
+      "Set-Cookie": "session=def; Path=/",
+      "X-API-Key": "live_key",
+      "notion-token": "tok",
+      "X-Trace-Id": "trace-1",
+    },
+    body: "",
+  }
+  let safe = redact_response(resp)
+  expect_eq(safe.headers["Cookie"], "[redacted]", "Cookie redacted")
+  expect_eq(safe.headers["Set-Cookie"], "[redacted]", "Set-Cookie redacted")
+  expect_eq(safe.headers["X-API-Key"], "[redacted]", "X-API-Key redacted")
+  expect_eq(safe.headers["notion-token"], "[redacted]", "Notion-Token redacted")
+  expect_eq(safe.headers["X-Trace-Id"], "trace-1", "non-sensitive headers preserved")
+  harness.stdio.println("redact other headers: ok")
+}
+
+@test
+pipeline test_truncates_oversize_body() {
+  var big = ""
+  var i = 0
+  while i < 2048 {
+    big = big + "x"
+    i = i + 1
+  }
+  let resp = {status: 500, ok: false, headers: {}, body: big}
+  let safe = redact_response(resp)
+  expect(len(safe.body) <= 1100, "body truncated to ~1024 chars, was " + to_string(len(safe.body)))
+  expect_contains(safe.body, "[truncated 1024 chars]", "truncation marker present")
+  harness.stdio.println("redact oversize body: ok")
+}
+
+@test
+pipeline test_pass_through_non_dict() {
+  let safe = redact_response("string envelope")
+  expect_eq(safe, "string envelope", "string envelopes pass through unchanged")
+  harness.stdio.println("redact non-dict: ok")
+}
+
+@test
+pipeline test_decode_thrown_still_works_after_redaction() {
+  // Sanity check that downstream decode_thrown still extracts the structured
+  // NotionError from a redacted envelope (the field shape is preserved).
+  let resp = {
+    status: 404,
+    ok: false,
+    headers: {Authorization: "Bearer secret_xyz", "x-request-id": "req-9"},
+    body: "{\"code\":\"object_not_found\",\"message\":\"missing\"}",
+    operation: "retrieve_a_page",
+  }
+  let decoded = decode_thrown(redact_response(resp))
+  expect_eq(decoded.status, 404, "status survives redaction")
+  expect_eq(decoded.code, "object_not_found", "code parsed")
+  expect_eq(decoded.message, "missing", "message parsed")
+  expect_eq(decoded.request_id, "req-9", "request_id preserved")
+  expect_eq(decoded.operation, "retrieve_a_page", "operation preserved")
+  harness.stdio.println("decode_thrown after redact: ok")
+}

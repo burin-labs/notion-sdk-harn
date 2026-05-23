@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **F7 (LOW, 2026-05-23 sweep) — redacted error envelopes.** Generated SDK
+  operations now `throw redact_response(resp)` instead of the raw response
+  envelope, stripping the request `Authorization` header (and other
+  secret-bearing headers like `Cookie` / `X-API-Key` / `Notion-Token`) and
+  truncating the response body to 1024 characters before the value crosses a
+  thrown boundary. Existing `decode_thrown` consumers keep working — the
+  redacted envelope preserves `status`, `ok`, `request_id`, and the parsed
+  fields they look at.
+- **Known limitation (F13 — deferred).** Hand-coded `retry: {max_attempts: N}`
+  is still embedded per generated operation; threading an optional
+  caller-supplied retry policy through `client` is tracked separately and not
+  in this PR's scope (it touches every op signature and is best handled in the
+  upstream `harn-openapi` codegen template).
+
 ## [0.1.0] - 2026-05-22
 
 Initial tagged release of the pure-Harn Notion REST SDK. Cuts a stable
