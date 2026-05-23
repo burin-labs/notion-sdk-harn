@@ -5,6 +5,70 @@
 // failures and legacy raw-generator errors have the same NotionError shape at
 // call sites. This module also supplies small pagination helpers for Notion's
 // `next_cursor` / `has_more` convention.
+//
+// Security note (2026-05-23 sweep, F7): generated operations route every
+// non-2xx HTTP response through `redact_response` before throwing, so the
+// request `Authorization: Bearer ...` header and any oversize / sensitive
+// upstream body never lands in caller logs or stack traces. The redaction
+// is cheap; do NOT introduce a code path that re-`throw resp` raw.
+let _MAX_REDACTED_BODY_CHARS = 1024
+
+let _SENSITIVE_HEADER_NAMES = [
+  "authorization",
+  "proxy-authorization",
+  "cookie",
+  "set-cookie",
+  "x-api-key",
+  "x-auth-token",
+  "notion-token",
+]
+
+/**
+ * Strip secret-bearing headers and truncate the body on an HTTP response
+ * envelope before it crosses a `throw` boundary.
+ *
+ * Keeps the dict shape so existing `decode_thrown` consumers continue to see
+ * `status`, `ok`, `headers`, and `body`. Removes any header whose lowercased
+ * name is in `_SENSITIVE_HEADER_NAMES` (Authorization, Cookie, etc.) and
+ * caps the body at 1024 characters (responses longer than that are usually
+ * unwanted provider-side echoes that bloat error logs).
+ */
+pub fn redact_response(resp) -> any {
+  if type_of(resp) != "dict" {
+    return resp
+  }
+  var redacted = resp
+  let headers = resp.get("headers")
+  if type_of(headers) == "dict" {
+    redacted = {...redacted, headers: _strip_sensitive_headers(headers)}
+  }
+  let body = resp.get("body")
+  if type_of(body) == "string" && len(body) > _MAX_REDACTED_BODY_CHARS {
+    let truncated_count = len(body) - _MAX_REDACTED_BODY_CHARS
+    redacted = {
+      ...redacted,
+      body: body[0:_MAX_REDACTED_BODY_CHARS]
+        + "…[truncated "
+        + to_string(truncated_count)
+        + " chars]",
+    }
+  }
+  return redacted
+}
+
+fn _strip_sensitive_headers(headers: dict) -> dict {
+  var out = {}
+  for entry in headers {
+    let key_lower = to_string(entry.key).to_lower()
+    if _SENSITIVE_HEADER_NAMES.contains(key_lower) {
+      out = {...out, [entry.key]: "[redacted]"}
+    } else {
+      out = {...out, [entry.key]: entry.value}
+    }
+  }
+  return out
+}
+
 /**
  * Decode a thrown value (string or dict) from a generated SDK call into a
  * NotionError dict shaped:
