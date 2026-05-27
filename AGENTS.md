@@ -24,7 +24,9 @@ This repo is the pure-Harn outbound Notion REST SDK. When docs disagree, prefer
 
 ## Local gate
 
-Install the pinned Harn CLI from crates.io, then run the same checks CI runs:
+Install the pinned Harn CLI, then run the same checks CI runs. Prefer the
+matching GitHub release binary for speed; `cargo install` is a portable
+fallback:
 
 ```sh
 version="$(tr -d '[:space:]' < .harn-version)"

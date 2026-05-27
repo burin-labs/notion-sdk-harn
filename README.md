@@ -47,7 +47,7 @@ import {
   post_database_query,
   post_page,
   retrieve_a_page,
-} from "notion-sdk-harn"
+} from "notion-sdk-harn/default"
 import { collect_all, decode_thrown, paginate } from "notion-sdk-harn/helpers"
 
 let client = new_client(
@@ -83,7 +83,7 @@ let all_rows = collect_all(
 )
 
 // Create a comment using a typed variant constructor
-import { create_a_comment, create_a_comment_variant1 } from "notion-sdk-harn"
+import { create_a_comment, create_a_comment_variant1 } from "notion-sdk-harn/default"
 
 create_a_comment(
   client,
@@ -229,7 +229,8 @@ harn run tests/recorded/notion_sdk_smoke.harn
 
 ## Development
 
-Install the pinned Harn CLI from crates.io and resolve package dependencies:
+Install the pinned Harn CLI and resolve package dependencies. The matching
+GitHub release binary is fastest; `cargo install` is a portable fallback:
 
 ```sh
 version="$(tr -d '[:space:]' < .harn-version)"
@@ -243,11 +244,11 @@ harn run scripts/regen.harn
 harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
-CI uses the same `.harn-version` pin, installing `harn-cli` from crates.io
-instead of relying on an ambient sibling checkout. The `tests/recorded/`
-suite uses the stdlib `http_mock` runtime; CI makes no live Notion HTTP calls.
-Live integration tests behind `NOTION_TOKEN` are welcome but not required;
-keep them out of CI.
+CI uses the same `.harn-version` pin, downloading and checksum-verifying the
+matching Linux release binary instead of relying on an ambient sibling checkout.
+The `tests/recorded/` suite uses the stdlib `http_mock` runtime; CI makes no
+live Notion HTTP calls. Live integration tests behind `NOTION_TOKEN` are
+welcome but not required; keep them out of CI.
 
 ## Releases
 

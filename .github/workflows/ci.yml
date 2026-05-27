@@ -19,9 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Read Harn version
         id: harn-version
         shell: bash
@@ -34,21 +31,39 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo-harn/${{ steps.harn-version.outputs.version }}
-          key: harn-cli-${{ runner.os }}-${{ steps.harn-version.outputs.version }}-${{ hashFiles('.harn-version') }}
+            .harn/ci-harn/${{ steps.harn-version.outputs.version }}
+          key: harn-cli-${{ runner.os }}-${{ runner.arch }}-${{ steps.harn-version.outputs.version }}-${{ hashFiles('.harn-version') }}
           restore-keys: |
-            harn-cli-${{ runner.os }}-${{ steps.harn-version.outputs.version }}-
+            harn-cli-${{ runner.os }}-${{ runner.arch }}-${{ steps.harn-version.outputs.version }}-
 
       - name: Install harn-cli
         shell: bash
         run: |
           set -euo pipefail
-          harn_root="${HOME}/.cargo-harn/${{ steps.harn-version.outputs.version }}"
+          version="${{ steps.harn-version.outputs.version }}"
+          tag="v${version#v}"
+          case "${RUNNER_OS}-${RUNNER_ARCH}" in
+            Linux-X64) asset="harn-x86_64-unknown-linux-gnu.tar.gz" ;;
+            Linux-ARM64) asset="harn-aarch64-unknown-linux-gnu.tar.gz" ;;
+            *)
+              echo "unsupported runner for Harn release binary: ${RUNNER_OS}-${RUNNER_ARCH}" >&2
+              exit 1
+              ;;
+          esac
+          harn_root="${GITHUB_WORKSPACE}/.harn/ci-harn/${version}"
           if [[ ! -x "${harn_root}/bin/harn" ]]; then
-            cargo install harn-cli --version "${{ steps.harn-version.outputs.version }}" --locked --root "${harn_root}"
+            mkdir -p "${harn_root}/bin"
+            curl -fsSL \
+              -o "${RUNNER_TEMP}/${asset}" \
+              "https://github.com/burin-labs/harn/releases/download/${tag}/${asset}"
+            curl -fsSL \
+              -o "${RUNNER_TEMP}/SHA256SUMS" \
+              "https://github.com/burin-labs/harn/releases/download/${tag}/SHA256SUMS"
+            (cd "${RUNNER_TEMP}" && grep "  ${asset}$" SHA256SUMS | sha256sum -c -)
+            tar -xzf "${RUNNER_TEMP}/${asset}" -C "${harn_root}/bin"
           fi
           echo "${harn_root}/bin" >> "${GITHUB_PATH}"
+          echo "HARN_BIN=${harn_root}/bin/harn" >> "${GITHUB_ENV}"
 
       - name: Show Harn version
         run: harn --version
@@ -89,7 +104,7 @@ jobs:
           harn add "$GITHUB_WORKSPACE@HEAD"
           harn install --locked
           cat > smoke.harn <<'EOF'
-          import { new_client } from "notion-sdk-harn"
+          import { new_client } from "notion-sdk-harn/default"
           import { decode_thrown, paginate } from "notion-sdk-harn/helpers"
 
           pipeline default() {
