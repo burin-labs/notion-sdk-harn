@@ -60,6 +60,7 @@ fn fixture_body(harness: Harness, path: string) -> string {
 
 @test
 pipeline default() {
+  egress_policy({allow: ["api.notion.test"], default: "deny"})
   // ---------------------------------------------------------------
   // retrieve_a_page: happy path
   // ---------------------------------------------------------------
