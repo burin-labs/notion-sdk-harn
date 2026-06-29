@@ -420,7 +420,7 @@ fn _join_url(base_url: string, path: string) -> string {
   if path == "" {
     return base_url
   }
-  let base_has_slash = substring(base_url, len(base_url) - 1, 1) == "/"
+  let base_has_slash = substring(base_url, len(base_url) - 1, len(base_url)) == "/"
   let path_has_slash = starts_with(path, "/")
   if base_has_slash && path_has_slash {
     return substring(base_url, 0, len(base_url) - 1) + path

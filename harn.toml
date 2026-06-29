@@ -15,4 +15,4 @@ helpers = "src/helpers.harn"
 # clean consumer project without a sibling checkout. Pin exact revisions for
 # reproducible codegen refreshes and package installs.
 [dependencies]
-harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "v0.1.1-rc.1" }
+harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "1f5b04b69fca20bc2e9e6d5179c3f66494539eb1" }

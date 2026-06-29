@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bump the local/CI Harn toolchain pin to `0.8.155` and repin
+  `harn-openapi` to `1f5b04b69fca20bc2e9e6d5179c3f66494539eb1`, which keeps
+  regenerated SDK helpers compatible with current Harn substring semantics.
+
 ### Security
 
 - **F7 (LOW, 2026-05-23 sweep) — redacted error envelopes.** Generated SDK
