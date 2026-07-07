@@ -20,35 +20,35 @@ import {
 } from "../../src/lib"
 import { expect, expect_contains, expect_eq } from "../assertions"
 
-let BASE_URL = "https://api.notion.test"
+const BASE_URL = "https://api.notion.test"
 
-let TOKEN = "secret_test_token"
+const TOKEN = "secret_test_token"
 
-let NOTION_VERSION = "2022-06-28"
+const NOTION_VERSION = "2022-06-28"
 
-let FIXTURE_DIR = source_dir() + "/../fixtures/recorded"
+const FIXTURE_DIR = source_dir() + "/../fixtures/recorded"
 
-let PAGE_OK_PATH = FIXTURE_DIR + "/page_retrieve_ok.json"
+const PAGE_OK_PATH = FIXTURE_DIR + "/page_retrieve_ok.json"
 
-let PAGE_404_PATH = FIXTURE_DIR + "/page_retrieve_404.json"
+const PAGE_404_PATH = FIXTURE_DIR + "/page_retrieve_404.json"
 
-let DS_QUERY_PAGE_1_PATH = FIXTURE_DIR + "/data_source_query_page_1.json"
+const DS_QUERY_PAGE_1_PATH = FIXTURE_DIR + "/data_source_query_page_1.json"
 
-let DS_QUERY_PAGE_2_PATH = FIXTURE_DIR + "/data_source_query_page_2.json"
+const DS_QUERY_PAGE_2_PATH = FIXTURE_DIR + "/data_source_query_page_2.json"
 
-let DS_QUERY_429_PATH = FIXTURE_DIR + "/data_source_query_429.json"
+const DS_QUERY_429_PATH = FIXTURE_DIR + "/data_source_query_429.json"
 
-let DS_TEMPLATES_PAGE_1_PATH = FIXTURE_DIR + "/data_source_templates_page_1.json"
+const DS_TEMPLATES_PAGE_1_PATH = FIXTURE_DIR + "/data_source_templates_page_1.json"
 
-let DS_TEMPLATES_PAGE_2_PATH = FIXTURE_DIR + "/data_source_templates_page_2.json"
+const DS_TEMPLATES_PAGE_2_PATH = FIXTURE_DIR + "/data_source_templates_page_2.json"
 
-let COMMENT_OK_PATH = FIXTURE_DIR + "/comment_create_ok.json"
+const COMMENT_OK_PATH = FIXTURE_DIR + "/comment_create_ok.json"
 
-let USERS_PAGE_1_PATH = FIXTURE_DIR + "/users_list_page_1.json"
+const USERS_PAGE_1_PATH = FIXTURE_DIR + "/users_list_page_1.json"
 
-let USERS_PAGE_2_PATH = FIXTURE_DIR + "/users_list_page_2.json"
+const USERS_PAGE_2_PATH = FIXTURE_DIR + "/users_list_page_2.json"
 
-let OAUTH_INTROSPECT_OK_PATH = FIXTURE_DIR + "/oauth_introspect_ok.json"
+const OAUTH_INTROSPECT_OK_PATH = FIXTURE_DIR + "/oauth_introspect_ok.json"
 
 fn fixture_client() {
   return new_client(BASE_URL, TOKEN, nil, "", "", nil, {"Notion-Version": NOTION_VERSION})
@@ -65,18 +65,18 @@ pipeline default() {
   // retrieve_a_page: happy path
   // ---------------------------------------------------------------
   http_mock_clear()
-  let page_id = "11111111-1111-1111-1111-111111111111"
+  const page_id = "11111111-1111-1111-1111-111111111111"
   http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + page_id,
     {status: 200, body: fixture_body(harness, PAGE_OK_PATH), headers: {"x-request-id": "req-page-ok"}},
   )
-  let client = fixture_client()
-  let page = retrieve_a_page(client, page_id)
+  const client = fixture_client()
+  const page = retrieve_a_page(client, page_id)
   expect_eq(page.object, "page", "page object kind")
   expect_eq(page.id, page_id, "page id round trip")
   expect_eq(page.properties.Status.select.name, "Done", "deeply nested property decoded")
-  let calls = http_mock_calls({include_sensitive: true})
+  const calls = http_mock_calls({include_sensitive: true})
   expect_eq(len(calls), 1, "one page retrieve call")
   expect_eq(calls[0].method, "GET", "GET method")
   expect_eq(calls[0].headers.authorization, "Bearer " + TOKEN, "bearer token applied")
@@ -99,9 +99,9 @@ pipeline default() {
       ],
     },
   )
-  let retried_users = get_users(client, nil, 2)
+  const retried_users = get_users(client, nil, 2)
   expect_eq(len(retried_users.results), 2, "safe GET retry returns list payload")
-  let retried_user_calls = http_mock_calls()
+  const retried_user_calls = http_mock_calls()
   expect_eq(len(retried_user_calls), 2, "safe GET retried once before success")
   // ---------------------------------------------------------------
   // client plumbing: provider tokens, base URL joins, version override
@@ -116,7 +116,7 @@ pipeline default() {
       headers: {"x-request-id": "req-page-provider"},
     },
   )
-  let provider_client = new_client(
+  const provider_client = new_client(
     BASE_URL + "/",
     "",
     fn() { return "provider_test_token" },
@@ -125,9 +125,9 @@ pipeline default() {
     nil,
     {"Notion-Version": NOTION_VERSION},
   )
-  let provider_page = retrieve_a_page(provider_client, page_id, nil, "2026-03-11")
+  const provider_page = retrieve_a_page(provider_client, page_id, nil, "2026-03-11")
   expect_eq(provider_page.id, page_id, "provider-token client retrieves page")
-  let provider_calls = http_mock_calls({include_sensitive: true})
+  const provider_calls = http_mock_calls({include_sensitive: true})
   expect_eq(len(provider_calls), 1, "provider-token client made one request")
   expect_eq(
     provider_calls[0].url,
@@ -148,17 +148,17 @@ pipeline default() {
   // retrieve_a_page: 404 becomes a structured NotionError via decode_thrown
   // ---------------------------------------------------------------
   http_mock_clear()
-  let missing_id = "99999999-9999-9999-9999-999999999999"
+  const missing_id = "99999999-9999-9999-9999-999999999999"
   http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + missing_id,
     {status: 404, body: fixture_body(harness, PAGE_404_PATH), headers: {"x-request-id": "req-404"}},
   )
-  let missing = try {
+  const missing = try {
     retrieve_a_page(client, missing_id)
   }
   expect(is_err(missing), "404 returns Err")
-  let err_404 = decode_thrown(unwrap_err(missing))
+  const err_404 = decode_thrown(unwrap_err(missing))
   expect_eq(err_404.status, 404, "decoded status")
   expect_eq(err_404.code, "object_not_found", "decoded Notion code")
   expect_contains(err_404.message, "Could not find page", "decoded Notion message")
@@ -173,22 +173,22 @@ pipeline default() {
     BASE_URL + "/v1/pages/" + page_id,
     {status: 200, body: "not json", headers: {"x-request-id": "req-invalid-json"}},
   )
-  let invalid_json = try {
+  const invalid_json = try {
     retrieve_a_page(client, page_id)
   }
   expect(is_err(invalid_json), "invalid JSON returns Err")
-  let invalid_json_raw = unwrap_err(invalid_json)
+  const invalid_json_raw = unwrap_err(invalid_json)
   expect_eq(invalid_json_raw.category, "invalid_json", "raw invalid JSON category")
   expect_eq(invalid_json_raw.status, 200, "raw invalid JSON status")
   expect_eq(invalid_json_raw.operation, "retrieve_a_page", "raw invalid JSON operation")
-  let err_invalid_json = decode_thrown(invalid_json_raw)
+  const err_invalid_json = decode_thrown(invalid_json_raw)
   expect_eq(err_invalid_json.code, "invalid_json", "decoded invalid JSON category")
   expect_eq(err_invalid_json.status, 200, "decoded invalid JSON status")
   // ---------------------------------------------------------------
   // data_sources.query: paginated walk via paginate(...)
   // ---------------------------------------------------------------
   http_mock_clear()
-  let ds_id = "33333333-3333-3333-3333-333333333333"
+  const ds_id = "33333333-3333-3333-3333-333333333333"
   http_mock(
     "POST",
     BASE_URL + "/v1/data_sources/" + ds_id + "/query",
@@ -207,7 +207,7 @@ pipeline default() {
       ],
     },
   )
-  let rows = collect_all(
+  const rows = collect_all(
     fn(args) { return post_database_query(
       client,
       ds_id,
@@ -217,12 +217,12 @@ pipeline default() {
   expect_eq(len(rows), 3, "paginate concatenates results across pages")
   expect_eq(rows[0].id, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", "first row id")
   expect_eq(rows[2].id, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3", "last row id")
-  let query_calls = http_mock_calls()
+  const query_calls = http_mock_calls()
   expect_eq(len(query_calls), 2, "two POSTs for two-page result")
-  let first_body = json_parse(query_calls[0].body)
+  const first_body = json_parse(query_calls[0].body)
   expect_eq(first_body.filter.property, "Status", "filter forwarded on page 1")
   expect_eq(first_body.get("start_cursor"), nil, "no cursor on first page")
-  let second_body = json_parse(query_calls[1].body)
+  const second_body = json_parse(query_calls[1].body)
   expect_eq(second_body.start_cursor, "page-2-cursor", "second page picks up cursor")
   expect_eq(second_body.filter.property, "Status", "filter preserved across pages")
   // ---------------------------------------------------------------
@@ -238,11 +238,11 @@ pipeline default() {
       headers: {"x-request-id": "req-429", "retry-after": "5"},
     },
   )
-  let throttled = try {
+  const throttled = try {
     post_database_query(client, ds_id, {})
   }
   expect(is_err(throttled), "429 returns Err")
-  let throttled_raw = unwrap_err(throttled)
+  const throttled_raw = unwrap_err(throttled)
   expect_eq(throttled_raw.retry_after_ms, 5000, "Retry-After surfaced as milliseconds")
   expect_eq(
     throttled_raw.rate_limit.retry_after_ms,
@@ -250,11 +250,11 @@ pipeline default() {
     "Retry-After surfaced in rate-limit metadata",
   )
   expect_eq(throttled_raw.rate_limit.retry_after, "5", "raw Retry-After header surfaced")
-  let err_429 = decode_thrown(throttled_raw)
+  const err_429 = decode_thrown(throttled_raw)
   expect_eq(err_429.status, 429, "decoded 429 status")
   expect_eq(err_429.code, "rate_limited", "decoded Notion rate_limited code")
   expect_eq(err_429.operation, "post_database_query", "decoded operation name")
-  let envelope_only = decode_thrown(
+  const envelope_only = decode_thrown(
     {
       ok: false,
       status: 400,
@@ -284,18 +284,18 @@ pipeline default() {
       ],
     },
   )
-  let no_retry_body = create_a_comment_variant1(
+  const no_retry_body = create_a_comment_variant1(
     {type: "page_id", page_id: page_id},
     [{type: "text", text: {content: "No retry without idempotency"}}],
   )
-  let no_retry = try {
+  const no_retry = try {
     create_a_comment(client, no_retry_body)
   }
   expect(is_err(no_retry), "write without idempotency key returns the first failure")
-  let no_retry_raw = unwrap_err(no_retry)
+  const no_retry_raw = unwrap_err(no_retry)
   expect_eq(no_retry_raw.status, 503, "write without idempotency keeps first status")
   expect_eq(no_retry_raw.category, "overloaded", "write without idempotency keeps connector category")
-  let no_retry_calls = http_mock_calls()
+  const no_retry_calls = http_mock_calls()
   expect_eq(len(no_retry_calls), 1, "write without idempotency is not retried")
   // ---------------------------------------------------------------
   // comments.create: variant1 (parent + rich_text)
@@ -310,16 +310,16 @@ pipeline default() {
       headers: {"x-request-id": "req-comment"},
     },
   )
-  let body = create_a_comment_variant1(
+  const body = create_a_comment_variant1(
     {type: "page_id", page_id: page_id},
     [{type: "text", text: {content: "Hello from notion-sdk-harn"}}],
   )
-  let comment = create_a_comment(client, body)
+  const comment = create_a_comment(client, body)
   expect_eq(comment.object, "comment", "comment object kind")
   expect_eq(comment.id, "cccccccc-cccc-cccc-cccc-cccccccccccc", "comment id round trip")
-  let comment_calls = http_mock_calls()
+  const comment_calls = http_mock_calls()
   expect_eq(len(comment_calls), 1, "one comments.create call")
-  let comment_body = json_parse(comment_calls[0].body)
+  const comment_body = json_parse(comment_calls[0].body)
   expect_eq(comment_body.parent.page_id, page_id, "comment parent forwarded")
   expect_eq(len(comment_body.rich_text), 1, "rich_text array forwarded")
   expect_eq(comment_body.get("_variant"), nil, "internal _variant marker stripped before send")
@@ -336,7 +336,7 @@ pipeline default() {
       headers: {"x-request-id": "req-oauth-introspect"},
     },
   )
-  let oauth_client = new_client(
+  const oauth_client = new_client(
     BASE_URL,
     "ignored-bearer-token",
     nil,
@@ -345,9 +345,9 @@ pipeline default() {
     fn() { return {user: "client-id", password: "client-secret"} },
     {"Notion-Version": NOTION_VERSION},
   )
-  let token_state = introspect_token(oauth_client, {token: "access-token"}, "2026-03-11")
+  const token_state = introspect_token(oauth_client, {token: "access-token"}, "2026-03-11")
   expect_eq(token_state.active, true, "introspection response decoded")
-  let oauth_calls = http_mock_calls({include_sensitive: true})
+  const oauth_calls = http_mock_calls({include_sensitive: true})
   expect_eq(len(oauth_calls), 1, "one oauth introspection call")
   expect_eq(
     oauth_calls[0].headers.authorization,
@@ -359,7 +359,7 @@ pipeline default() {
     "2026-03-11",
     "oauth version override applied",
   )
-  let oauth_body = json_parse(oauth_calls[0].body)
+  const oauth_body = json_parse(oauth_calls[0].body)
   expect_eq(oauth_body.token, "access-token", "oauth body forwarded")
   // ---------------------------------------------------------------
   // users.list: paginate via paginate(...) with explicit page_size
@@ -383,11 +383,11 @@ pipeline default() {
       ],
     },
   )
-  let users = collect_all(fn(args) { return get_users(client, args.get("start_cursor"), 50) })
+  const users = collect_all(fn(args) { return get_users(client, args.get("start_cursor"), 50) })
   expect_eq(len(users), 3, "users.list paginates across two pages")
   expect_eq(users[0].name, "Ada Lovelace", "first user")
   expect_eq(users[2].type, "bot", "bot user on second page")
-  let user_calls = http_mock_calls()
+  const user_calls = http_mock_calls()
   expect_eq(len(user_calls), 2, "two GETs for two-page result")
   expect_contains(user_calls[0].url, "page_size=50", "page_size forwarded as query param")
   expect(user_calls[0].url.index_of("start_cursor=") < 0, "no start_cursor on first page")
@@ -401,14 +401,14 @@ pipeline default() {
     BASE_URL + "/v1/users*",
     {status: 200, body: fixture_body(harness, USERS_PAGE_1_PATH), headers: {}},
   )
-  var first_only = nil
+  let first_only = nil
   for u in paginate(fn(args) { return get_users(client, args.get("start_cursor"), nil) }) {
     first_only = u
     break
   }
   expect(first_only != nil, "stream yields at least one item")
   expect_eq(first_only.id, "22222222-2222-2222-2222-222222222222", "first streamed user")
-  let lazy_calls = http_mock_calls()
+  const lazy_calls = http_mock_calls()
   expect_eq(len(lazy_calls), 1, "lazy paginate stops after first page when consumer breaks")
   // ---------------------------------------------------------------
   // data_sources.templates — non-`results` list pagination
@@ -424,7 +424,7 @@ pipeline default() {
       ],
     },
   )
-  let templates = collect_all(
+  const templates = collect_all(
     fn(args) { return list_data_source_templates(client, ds_id, nil, args.get("start_cursor"), 50) },
     {},
     "templates",
@@ -432,7 +432,7 @@ pipeline default() {
   expect_eq(len(templates), 3, "templates paginate across two pages")
   expect_eq(templates[0].name, "Research note", "first template decoded")
   expect_eq(templates[2].id, "template-3", "last template decoded")
-  let template_calls = http_mock_calls()
+  const template_calls = http_mock_calls()
   expect_eq(len(template_calls), 2, "two GETs for template pagination")
   expect_contains(template_calls[0].url, "page_size=50", "template page_size forwarded")
   expect(template_calls[0].url.index_of("start_cursor=") < 0, "no template cursor on first page")
@@ -440,9 +440,9 @@ pipeline default() {
   // ---------------------------------------------------------------
   // generated pagination metadata — body cursors + alternate items fields
   // ---------------------------------------------------------------
-  let query_plan = pagination_plan("post-database-query")
+  const query_plan = pagination_plan("post-database-query")
   expect(query_plan != nil, "data source query has generated pagination metadata")
-  let query_plan_value = query_plan ?? {}
+  const query_plan_value = query_plan ?? {}
   expect_eq(
     query_plan_value.cursor_location,
     "body",
@@ -453,11 +453,11 @@ pipeline default() {
     "body",
     "data source query page size lives in request body",
   )
-  let query_next = pagination_next({has_more: true, next_cursor: "page-2-cursor"}, query_plan_value)
+  const query_next = pagination_next({has_more: true, next_cursor: "page-2-cursor"}, query_plan_value)
   expect_eq(query_next.body.start_cursor, "page-2-cursor", "body cursor directive returned")
-  let template_plan = pagination_plan("list-data-source-templates")
+  const template_plan = pagination_plan("list-data-source-templates")
   expect(template_plan != nil, "template list has generated pagination metadata")
-  let template_plan_value = template_plan ?? {}
+  const template_plan_value = template_plan ?? {}
   expect_eq(template_plan_value.items_field, "templates", "template plan uses templates item field")
   expect_eq(
     len(pagination_items({templates: templates}, template_plan_value)),

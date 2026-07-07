@@ -187,7 +187,7 @@ pub fn new_client(
 }
 
 fn _no_auth_headers(client: dict) -> dict {
-  var hs = {"Content-Type": "application/json"}
+  let hs = {"Content-Type": "application/json"}
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
@@ -195,7 +195,7 @@ fn _no_auth_headers(client: dict) -> dict {
 }
 
 fn _merge_header_dicts(header_sets: list) -> dict {
-  var out = {}
+  let out = {}
   for hs in header_sets {
     for entry in hs {
       out = {...out, [entry.key]: entry.value}
@@ -205,7 +205,7 @@ fn _merge_header_dicts(header_sets: list) -> dict {
 }
 
 fn _with_extra_headers(headers: dict, client: dict) -> dict {
-  var hs = headers
+  let hs = headers
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
@@ -279,8 +279,8 @@ fn _client_basic(client: dict) -> dict {
 }
 
 fn _headers_bearer_auth(client: dict) -> dict {
-  let token = _client_token(client)
-  var hs = {"Content-Type": "application/json"}
+  const token = _client_token(client)
+  let hs = {"Content-Type": "application/json"}
   if token != "" {
     hs = {...hs, Authorization: "Bearer " + token}
   }
@@ -288,10 +288,10 @@ fn _headers_bearer_auth(client: dict) -> dict {
 }
 
 fn _headers_basic_auth(client: dict) -> dict {
-  let basic = _client_basic(client)
-  var hs = {"Content-Type": "application/json"}
+  const basic = _client_basic(client)
+  let hs = {"Content-Type": "application/json"}
   if basic.get("user") != "" || basic.get("password") != "" {
-    let encoded = base64_encode(to_string(basic.user) + ":" + to_string(basic.password))
+    const encoded = base64_encode(to_string(basic.user) + ":" + to_string(basic.password))
     hs = {...hs, Authorization: "Basic " + encoded}
   }
   return _with_extra_headers(hs, client)
@@ -406,7 +406,7 @@ pub fn is_rate_limited_response(resp: dict) -> bool {
 }
 
 fn _interpolate(template: string, bindings: dict) -> string {
-  var out = template
+  let out = template
   for entry in bindings {
     out = replace(out, "{" + entry.key + "}", url_encode(to_string(entry.value)))
   }
@@ -432,7 +432,7 @@ fn _join_url(base_url: string, path: string) -> string {
 }
 
 fn _query_string(params: dict) -> string {
-  var parts = []
+  let parts = []
   for entry in params {
     if entry.value != nil {
       parts = parts + [url_encode(entry.key) + "=" + url_encode(to_string(entry.value))]
@@ -448,7 +448,7 @@ fn _strip_codegen_variant(body) -> dict {
   if type_of(body) != "dict" {
     throw "polymorphic request body must be a dict with a _variant marker"
   }
-  var out = {}
+  let out = {}
   for entry in body {
     if entry.key != "_variant" {
       out = {...out, [entry.key]: entry.value}
@@ -462,11 +462,11 @@ pub fn retrieve_a_block(client: dict, block_id, notion_version = nil) -> any {
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -487,11 +487,11 @@ pub fn delete_a_block(client: dict, block_id, notion_version = nil) -> any {
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "DELETE",
     url,
     {
@@ -512,11 +512,11 @@ pub fn update_a_block(client: dict, block_id, body, notion_version = nil) -> any
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_variant = if type_of(body) == "dict" {
+  const body_variant = if type_of(body) == "dict" {
     body.get("_variant")
   } else {
     nil
@@ -527,8 +527,8 @@ pub fn update_a_block(client: dict, block_id, body, notion_version = nil) -> any
   if !["Variant1", "Variant2"].contains(body_variant) {
     throw "update_a_block: unknown request body variant " + to_string(body_variant)
   }
-  let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = connector_http_json(
+  const body_str = json_stringify(_strip_codegen_variant(body))
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -552,7 +552,7 @@ pub fn update_a_block_variant1(payload: dict) -> dict {
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn update_a_block_variant2(in_trash = nil) -> dict {
-  var body = {_variant: "Variant2"}
+  let body = {_variant: "Variant2"}
   if in_trash != nil {
     body = {...body, in_trash: in_trash}
   }
@@ -570,13 +570,13 @@ pub fn get_block_children(
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -589,7 +589,7 @@ pub fn get_block_children(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_block_children: expected dict response, got " + type_of(raw)
   }
@@ -601,12 +601,12 @@ pub fn patch_block_children(client: dict, block_id, body, notion_version = nil) 
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -620,7 +620,7 @@ pub fn patch_block_children(client: dict, block_id, body, notion_version = nil) 
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "patch_block_children: expected dict response, got " + type_of(raw)
   }
@@ -638,13 +638,13 @@ pub fn list_comments(
   let path_bindings = {}
   let path = _interpolate("/v1/comments", path_bindings)
   let query_bindings = {block_id: block_id, start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "list_comments", retry: {max_attempts: 3}},
@@ -652,7 +652,7 @@ pub fn list_comments(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_comments: expected dict response, got " + type_of(raw)
   }
@@ -664,11 +664,11 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
   let path_bindings = {}
   let path = _interpolate("/v1/comments", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_variant = if type_of(body) == "dict" {
+  const body_variant = if type_of(body) == "dict" {
     body.get("_variant")
   } else {
     nil
@@ -679,8 +679,8 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
   if !["Variant1", "Variant2", "Variant3", "Variant4"].contains(body_variant) {
     throw "create_a_comment: unknown request body variant " + to_string(body_variant)
   }
-  let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = connector_http_json(
+  const body_str = json_stringify(_strip_codegen_variant(body))
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -699,25 +699,25 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn create_a_comment_variant1(parent: dict, rich_text: list) -> dict {
-  var body = {parent: parent, rich_text: rich_text, _variant: "Variant1"}
+  let body = {parent: parent, rich_text: rich_text, _variant: "Variant1"}
   return body
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_comment_variant2(markdown: string, parent: dict) -> dict {
-  var body = {markdown: markdown, parent: parent, _variant: "Variant2"}
+  let body = {markdown: markdown, parent: parent, _variant: "Variant2"}
   return body
 }
 
 /** Build a `Variant3` variant of the polymorphic request body. */
 pub fn create_a_comment_variant3(discussion_id: string, rich_text: list) -> dict {
-  var body = {discussion_id: discussion_id, rich_text: rich_text, _variant: "Variant3"}
+  let body = {discussion_id: discussion_id, rich_text: rich_text, _variant: "Variant3"}
   return body
 }
 
 /** Build a `Variant4` variant of the polymorphic request body. */
 pub fn create_a_comment_variant4(discussion_id: string, markdown: string) -> dict {
-  var body = {discussion_id: discussion_id, markdown: markdown, _variant: "Variant4"}
+  let body = {discussion_id: discussion_id, markdown: markdown, _variant: "Variant4"}
   return body
 }
 
@@ -726,11 +726,11 @@ pub fn retrieve_comment(client: dict, comment_id, notion_version = nil) -> any {
   let path_bindings = {comment_id: comment_id}
   let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -751,11 +751,11 @@ pub fn delete_a_comment(client: dict, comment_id, notion_version = nil) -> any {
   let path_bindings = {comment_id: comment_id}
   let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "DELETE",
     url,
     {
@@ -776,11 +776,11 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
   let path_bindings = {comment_id: comment_id}
   let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_variant = if type_of(body) == "dict" {
+  const body_variant = if type_of(body) == "dict" {
     body.get("_variant")
   } else {
     nil
@@ -791,8 +791,8 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
   if !["Variant1", "Variant2"].contains(body_variant) {
     throw "update_a_comment: unknown request body variant " + to_string(body_variant)
   }
-  let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = connector_http_json(
+  const body_str = json_stringify(_strip_codegen_variant(body))
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -811,13 +811,13 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn update_a_comment_variant1(rich_text: list) -> dict {
-  var body = {rich_text: rich_text, _variant: "Variant1"}
+  let body = {rich_text: rich_text, _variant: "Variant1"}
   return body
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn update_a_comment_variant2(markdown: string) -> dict {
-  var body = {markdown: markdown, _variant: "Variant2"}
+  let body = {markdown: markdown, _variant: "Variant2"}
   return body
 }
 
@@ -832,13 +832,13 @@ pub fn list_custom_emojis(
   let path_bindings = {}
   let path = _interpolate("/v1/custom_emojis", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size, name: name}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -851,7 +851,7 @@ pub fn list_custom_emojis(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_custom_emojis: expected dict response, got " + type_of(raw)
   }
@@ -863,12 +863,12 @@ pub fn create_a_database(client: dict, body, notion_version = nil) -> any {
   let path_bindings = {}
   let path = _interpolate("/v1/data_sources", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -890,11 +890,11 @@ pub fn retrieve_a_data_source(client: dict, data_source_id, notion_version = nil
   let path_bindings = {data_source_id: data_source_id}
   let path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -915,12 +915,12 @@ pub fn update_a_data_source(client: dict, data_source_id, body, notion_version =
   let path_bindings = {data_source_id: data_source_id}
   let path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -948,14 +948,14 @@ pub fn post_database_query(
   let path_bindings = {data_source_id: data_source_id}
   let path = _interpolate("/v1/data_sources/{data_source_id}/query", path_bindings)
   let query_bindings = {filter_properties: filter_properties}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -969,7 +969,7 @@ pub fn post_database_query(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "post_database_query: expected dict response, got " + type_of(raw)
   }
@@ -988,13 +988,13 @@ pub fn list_data_source_templates(
   let path_bindings = {data_source_id: data_source_id}
   let path = _interpolate("/v1/data_sources/{data_source_id}/templates", path_bindings)
   let query_bindings = {name: name, start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1007,7 +1007,7 @@ pub fn list_data_source_templates(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_data_source_templates: expected dict response, got " + type_of(raw)
   }
@@ -1019,12 +1019,12 @@ pub fn create_database(client: dict, body, notion_version = nil) -> any {
   let path_bindings = {}
   let path = _interpolate("/v1/databases", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1046,11 +1046,11 @@ pub fn retrieve_database(client: dict, database_id, notion_version = nil) -> any
   let path_bindings = {database_id: database_id}
   let path = _interpolate("/v1/databases/{database_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1071,12 +1071,12 @@ pub fn update_database(client: dict, database_id, body, notion_version = nil) ->
   let path_bindings = {database_id: database_id}
   let path = _interpolate("/v1/databases/{database_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -1104,13 +1104,13 @@ pub fn list_file_uploads(
   let path_bindings = {}
   let path = _interpolate("/v1/file_uploads", path_bindings)
   let query_bindings = {status: status, start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1123,7 +1123,7 @@ pub fn list_file_uploads(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_file_uploads: expected dict response, got " + type_of(raw)
   }
@@ -1135,12 +1135,12 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
   let path_bindings = {}
   let path = _interpolate("/v1/file_uploads", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1154,7 +1154,7 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_file: expected dict response, got " + type_of(raw)
   }
@@ -1166,11 +1166,11 @@ pub fn retrieve_file_upload(client: dict, file_upload_id, notion_version = nil) 
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1183,7 +1183,7 @@ pub fn retrieve_file_upload(client: dict, file_upload_id, notion_version = nil) 
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "retrieve_file_upload: expected dict response, got " + type_of(raw)
   }
@@ -1195,11 +1195,11 @@ pub fn complete_file_upload(client: dict, file_upload_id, notion_version = nil) 
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}/complete", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1212,7 +1212,7 @@ pub fn complete_file_upload(client: dict, file_upload_id, notion_version = nil) 
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "complete_file_upload: expected dict response, got " + type_of(raw)
   }
@@ -1224,12 +1224,12 @@ pub fn upload_file(client: dict, file_upload_id, body, notion_version = nil) -> 
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}/send", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1243,7 +1243,7 @@ pub fn upload_file(client: dict, file_upload_id, body, notion_version = nil) -> 
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "upload_file: expected dict response, got " + type_of(raw)
   }
@@ -1255,12 +1255,12 @@ pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectT
   let path_bindings = {}
   let path = _interpolate("/v1/oauth/introspect", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_basic_auth(client)
+  let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1274,7 +1274,7 @@ pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectT
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "introspect_token: expected dict response, got " + type_of(raw)
   }
@@ -1286,12 +1286,12 @@ pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResp
   let path_bindings = {}
   let path = _interpolate("/v1/oauth/revoke", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_basic_auth(client)
+  let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1305,7 +1305,7 @@ pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResp
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "revoke_token: expected dict response, got " + type_of(raw)
   }
@@ -1317,11 +1317,11 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
   let path_bindings = {}
   let path = _interpolate("/v1/oauth/token", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_basic_auth(client)
+  let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_variant = if type_of(body) == "dict" {
+  const body_variant = if type_of(body) == "dict" {
     body.get("_variant")
   } else {
     nil
@@ -1332,8 +1332,8 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
   if !["Variant1", "Variant2"].contains(body_variant) {
     throw "create_a_token: unknown request body variant " + to_string(body_variant)
   }
-  let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = connector_http_json(
+  const body_str = json_stringify(_strip_codegen_variant(body))
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1347,7 +1347,7 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_a_token: expected dict response, got " + type_of(raw)
   }
@@ -1356,7 +1356,7 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn create_a_token_variant1(code: string, external_account = nil, redirect_uri = nil) -> dict {
-  var body = {code: code, grant_type: "authorization_code", _variant: "Variant1"}
+  let body = {code: code, grant_type: "authorization_code", _variant: "Variant1"}
   if external_account != nil {
     body = {...body, external_account: external_account}
   }
@@ -1368,7 +1368,7 @@ pub fn create_a_token_variant1(code: string, external_account = nil, redirect_ur
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_token_variant2(refresh_token: string) -> dict {
-  var body = {grant_type: "refresh_token", refresh_token: refresh_token, _variant: "Variant2"}
+  let body = {grant_type: "refresh_token", refresh_token: refresh_token, _variant: "Variant2"}
   return body
 }
 
@@ -1377,12 +1377,12 @@ pub fn post_page(client: dict, body, notion_version = nil) -> any {
   let path_bindings = {}
   let path = _interpolate("/v1/pages", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1404,13 +1404,13 @@ pub fn retrieve_a_page(client: dict, page_id, filter_properties = nil, notion_ve
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}", path_bindings)
   let query_bindings = {filter_properties: filter_properties}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1431,12 +1431,12 @@ pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -1458,13 +1458,13 @@ pub fn retrieve_page_markdown(client: dict, page_id, include_transcript = nil, n
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
   let query_bindings = {include_transcript: include_transcript}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1477,7 +1477,7 @@ pub fn retrieve_page_markdown(client: dict, page_id, include_transcript = nil, n
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "retrieve_page_markdown: expected dict response, got " + type_of(raw)
   }
@@ -1489,11 +1489,11 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_variant = if type_of(body) == "dict" {
+  const body_variant = if type_of(body) == "dict" {
     body.get("_variant")
   } else {
     nil
@@ -1504,8 +1504,8 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
   if !["InsertContent", "ReplaceContentRange", "UpdateContent", "ReplaceContent"].contains(body_variant) {
     throw "update_page_markdown: unknown request body variant " + to_string(body_variant)
   }
-  let body_str = json_stringify(_strip_codegen_variant(body))
-  let resp = connector_http_json(
+  const body_str = json_stringify(_strip_codegen_variant(body))
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -1519,7 +1519,7 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "update_page_markdown: expected dict response, got " + type_of(raw)
   }
@@ -1528,13 +1528,13 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
 
 /** Build a `InsertContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_insert_content(insert_content: dict) -> dict {
-  var body = {insert_content: insert_content, type: "insert_content", _variant: "InsertContent"}
+  let body = {insert_content: insert_content, type: "insert_content", _variant: "InsertContent"}
   return body
 }
 
 /** Build a `ReplaceContentRange` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content_range(replace_content_range: dict) -> dict {
-  var body = {
+  let body = {
     replace_content_range: replace_content_range,
     type: "replace_content_range",
     _variant: "ReplaceContentRange",
@@ -1544,13 +1544,13 @@ pub fn update_page_markdown_replace_content_range(replace_content_range: dict) -
 
 /** Build a `UpdateContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_update_content(update_content: dict) -> dict {
-  var body = {type: "update_content", update_content: update_content, _variant: "UpdateContent"}
+  let body = {type: "update_content", update_content: update_content, _variant: "UpdateContent"}
   return body
 }
 
 /** Build a `ReplaceContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content(replace_content: dict) -> dict {
-  var body = {replace_content: replace_content, type: "replace_content", _variant: "ReplaceContent"}
+  let body = {replace_content: replace_content, type: "replace_content", _variant: "ReplaceContent"}
   return body
 }
 
@@ -1559,12 +1559,12 @@ pub fn move_page(client: dict, page_id, body, notion_version = nil) -> any {
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}/move", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1593,13 +1593,13 @@ pub fn retrieve_a_page_property(
   let path_bindings = {page_id: page_id, property_id: property_id}
   let path = _interpolate("/v1/pages/{page_id}/properties/{property_id}", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1620,12 +1620,12 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
   let path_bindings = {}
   let path = _interpolate("/v1/search", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1639,7 +1639,7 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "post_search: expected dict response, got " + type_of(raw)
   }
@@ -1651,13 +1651,13 @@ pub fn get_users(client: dict, start_cursor = nil, page_size = nil, notion_versi
   let path_bindings = {}
   let path = _interpolate("/v1/users", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "get_users", retry: {max_attempts: 3}},
@@ -1665,7 +1665,7 @@ pub fn get_users(client: dict, start_cursor = nil, page_size = nil, notion_versi
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_users: expected dict response, got " + type_of(raw)
   }
@@ -1677,11 +1677,11 @@ pub fn get_self(client: dict, notion_version = nil) -> UserObjectResponse {
   let path_bindings = {}
   let path = _interpolate("/v1/users/me", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "get_self", retry: {max_attempts: 3}},
@@ -1689,7 +1689,7 @@ pub fn get_self(client: dict, notion_version = nil) -> UserObjectResponse {
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_self: expected dict response, got " + type_of(raw)
   }
@@ -1701,11 +1701,11 @@ pub fn get_user(client: dict, user_id, notion_version = nil) -> UserObjectRespon
   let path_bindings = {user_id: user_id}
   let path = _interpolate("/v1/users/{user_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "get_user", retry: {max_attempts: 3}},
@@ -1713,7 +1713,7 @@ pub fn get_user(client: dict, user_id, notion_version = nil) -> UserObjectRespon
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_user: expected dict response, got " + type_of(raw)
   }
@@ -1737,13 +1737,13 @@ pub fn list_views(
     start_cursor: start_cursor,
     page_size: page_size,
   }
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "list_views", retry: {max_attempts: 3}},
@@ -1751,7 +1751,7 @@ pub fn list_views(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "list_views: expected dict response, got " + type_of(raw)
   }
@@ -1763,12 +1763,12 @@ pub fn create_view(client: dict, body, notion_version = nil) -> any {
   let path_bindings = {}
   let path = _interpolate("/v1/views", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1790,11 +1790,11 @@ pub fn retrieve_a_view(client: dict, view_id, notion_version = nil) -> any {
   let path_bindings = {view_id: view_id}
   let path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1815,11 +1815,11 @@ pub fn delete_view(client: dict, view_id, notion_version = nil) -> PartialDataSo
   let path_bindings = {view_id: view_id}
   let path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "DELETE",
     url,
     {headers: request_headers, provider: "notion", operation: "delete_view", retry: {max_attempts: 3}},
@@ -1827,7 +1827,7 @@ pub fn delete_view(client: dict, view_id, notion_version = nil) -> PartialDataSo
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "delete_view: expected dict response, got " + type_of(raw)
   }
@@ -1839,12 +1839,12 @@ pub fn update_a_view(client: dict, view_id, body, notion_version = nil) -> any {
   let path_bindings = {view_id: view_id}
   let path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "PATCH",
     url,
     {
@@ -1866,12 +1866,12 @@ pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> V
   let path_bindings = {view_id: view_id}
   let path = _interpolate("/v1/views/{view_id}/queries", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let body_str = json_stringify(body)
-  let resp = connector_http_json(
+  const body_str = json_stringify(body)
+  const resp = connector_http_json(
     "POST",
     url,
     {
@@ -1885,7 +1885,7 @@ pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> V
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "create_view_query: expected dict response, got " + type_of(raw)
   }
@@ -1904,13 +1904,13 @@ pub fn get_view_query_results(
   let path_bindings = {view_id: view_id, query_id: query_id}
   let path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size}
-  var url = _join_url(client.base_url, path)
+  let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "GET",
     url,
     {
@@ -1923,7 +1923,7 @@ pub fn get_view_query_results(
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "get_view_query_results: expected dict response, got " + type_of(raw)
   }
@@ -1935,11 +1935,11 @@ pub fn delete_view_query(client: dict, view_id, query_id, notion_version = nil) 
   let path_bindings = {view_id: view_id, query_id: query_id}
   let path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
   let url = _join_url(client.base_url, path)
-  var request_headers = _headers_bearer_auth(client)
+  let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  let resp = connector_http_json(
+  const resp = connector_http_json(
     "DELETE",
     url,
     {
@@ -1952,7 +1952,7 @@ pub fn delete_view_query(client: dict, view_id, query_id, notion_version = nil) 
   if !(resp.ok ?? false) {
     throw redact_response(resp)
   }
-  let raw = resp.json
+  const raw = resp.json
   if type_of(raw) != "dict" {
     throw "delete_view_query: expected dict response, got " + type_of(raw)
   }
