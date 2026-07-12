@@ -5,7 +5,7 @@ Harn. The source is generated from
 [Notion's OpenAPI 3.1 spec](https://developers.notion.com/openapi.json) via
 [harn-openapi](https://github.com/burin-labs/harn-openapi).
 
-> **Status: pre-1.0.** The SDK tracks the current Harn 0.8 package workflow
+> **Status: pre-1.0.** The SDK tracks the current Harn 0.10 package workflow
 > and the pinned Notion OpenAPI snapshot in this repo.
 
 This SDK covers **outbound** API calls only. For inbound webhook handling,
@@ -23,7 +23,7 @@ dependencies from `harn.toml`; it does not require sibling checkouts. Pin a tag
 when you need reproducible installs:
 
 ```sh
-harn add github.com/burin-labs/notion-sdk-harn@v0.1.0
+harn add github.com/burin-labs/notion-sdk-harn@v0.1.1
 ```
 
 For local multi-repo development, a path dependency is still useful:
@@ -50,7 +50,7 @@ import {
 } from "notion-sdk-harn/default"
 import { collect_all, decode_thrown, paginate } from "notion-sdk-harn/helpers"
 
-let client = new_client(
+const client = new_client(
   "https://api.notion.com",
   env("NOTION_TOKEN"),
   nil,
@@ -61,7 +61,7 @@ let client = new_client(
 )
 
 // Retrieve a page
-let page = retrieve_a_page(client, "abc123...")
+const page = retrieve_a_page(client, "abc123...")
 println(page.properties.Name.title[0].plain_text)
 
 // Query a data source with auto-pagination (lazy stream)
@@ -78,7 +78,7 @@ for row in paginate(
 }
 
 // Or collect every row eagerly
-let all_rows = collect_all(
+const all_rows = collect_all(
   fn(args) { return post_database_query(client, "def456...", args) },
 )
 
@@ -102,9 +102,9 @@ and pass the `Err` value through `decode_thrown` to recover a structured error:
 ```harn
 import { decode_thrown } from "notion-sdk-harn/helpers"
 
-let result = try { retrieve_a_page(client, "missing") }
+const result = try { retrieve_a_page(client, "missing") }
 if is_err(result) {
-  let err = decode_thrown(unwrap_err(result))
+  const err = decode_thrown(unwrap_err(result))
   // err == {
   //   status: 404,
   //   code: "object_not_found",
@@ -172,7 +172,7 @@ from `https://developers.notion.com/openapi.json` and regenerate.
 different default through `extra_headers`:
 
 ```harn
-let client = new_client(
+const client = new_client(
   "https://api.notion.com",
   env("NOTION_TOKEN"),
   nil, "", "", nil,
@@ -184,7 +184,7 @@ Generated operations also accept an optional trailing `notion_version`
 argument for one-off calls that need a newer dialect:
 
 ```harn
-let page = retrieve_a_page(client, "abc123...", nil, "2026-03-11")
+const page = retrieve_a_page(client, "abc123...", nil, "2026-03-11")
 ```
 
 Notion guarantees backward compatibility within a major version per its
