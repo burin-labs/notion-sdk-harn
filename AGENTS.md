@@ -50,9 +50,8 @@ For local generator work, you may temporarily switch it to a sibling path
 checkout such as `../harn-openapi`; restore the git pin before committing or
 opening a package PR.
 
-For general Harn conventions, use
-[`/Users/ksinder/projects/harn/AGENTS.md`](/Users/ksinder/projects/harn/AGENTS.md)
-when that checkout is available.
+For general Harn conventions, use the canonical
+[Harn contributor guidance](https://github.com/burin-labs/harn/blob/main/AGENTS.md).
 
 ## Avoid
 

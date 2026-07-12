@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-11
+
 ### Changed
 
-- Bump the local/CI Harn toolchain pin to `0.8.155` and repin
-  `harn-openapi` to `1f5b04b69fca20bc2e9e6d5179c3f66494539eb1`, which keeps
-  regenerated SDK helpers compatible with current Harn substring semantics.
+- Migrated the package and generated SDK to Harn 0.10, with the repository and
+  CI pinned to Harn 0.10.10.
+- Regenerated the Notion API surface with the pinned `harn-openapi` revision.
 
 ### Security
 
@@ -56,5 +58,6 @@ a reproducible version instead of tracking `branch = "main"`.
   handling lives in
   [`harn-notion-connector`](https://github.com/burin-labs/harn-notion-connector).
 
-[Unreleased]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/burin-labs/notion-sdk-harn/releases/tag/v0.1.0
