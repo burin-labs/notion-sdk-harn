@@ -187,7 +187,7 @@ pub fn new_client(
 }
 
 fn _no_auth_headers(client: dict) -> dict {
-  let hs = {"Content-Type": "application/json"}
+  let hs: dict = {"Content-Type": "application/json"}
   for entry in client.extra_headers {
     hs = {...hs, [entry.key]: entry.value}
   }
@@ -280,7 +280,7 @@ fn _client_basic(client: dict) -> dict {
 
 fn _headers_bearer_auth(client: dict) -> dict {
   const token = _client_token(client)
-  let hs = {"Content-Type": "application/json"}
+  let hs: dict = {"Content-Type": "application/json"}
   if token != "" {
     hs = {...hs, Authorization: "Bearer " + token}
   }
@@ -289,7 +289,7 @@ fn _headers_bearer_auth(client: dict) -> dict {
 
 fn _headers_basic_auth(client: dict) -> dict {
   const basic = _client_basic(client)
-  let hs = {"Content-Type": "application/json"}
+  let hs: dict = {"Content-Type": "application/json"}
   if basic.get("user") != "" || basic.get("password") != "" {
     const encoded = base64_encode(to_string(basic.user) + ":" + to_string(basic.password))
     hs = {...hs, Authorization: "Basic " + encoded}
