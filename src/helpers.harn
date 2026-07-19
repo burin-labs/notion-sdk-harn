@@ -99,7 +99,14 @@ pub fn decode_thrown(thrown) -> dict {
   const marker = ": HTTP "
   const marker_index = text.index_of(marker)
   if marker_index < 0 {
-    return {status: 0, code: "transport_error", message: text, request_id: "", body: "", operation: ""}
+    return {
+      status: 0,
+      code: "transport_error",
+      message: text,
+      request_id: "",
+      body: "",
+      operation: "",
+    }
   }
   const operation = text[0:marker_index]
   const detail = text[marker_index + len(marker):len(text)]
@@ -232,7 +239,11 @@ fn _default_code_for_status(status: int) -> string {
  * Throws from the fetcher (including non-2xx HTTP errors) propagate to
  * the consumer at the next pull.
  */
-pub gen fn paginate(fetcher, initial_args: dict = {}, items_field: string = "results") -> Stream<dict> {
+pub gen fn paginate(
+  fetcher,
+  initial_args: dict = {},
+  items_field: string = "results",
+) -> Stream<dict> {
   let args = initial_args
   while true {
     const resp = fetcher(args)

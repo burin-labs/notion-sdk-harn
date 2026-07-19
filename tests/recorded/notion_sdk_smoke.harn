@@ -69,7 +69,11 @@ pipeline default() {
   http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + page_id,
-    {status: 200, body: fixture_body(harness, PAGE_OK_PATH), headers: {"x-request-id": "req-page-ok"}},
+    {
+      status: 200,
+      body: fixture_body(harness, PAGE_OK_PATH),
+      headers: {"x-request-id": "req-page-ok"},
+    },
   )
   const client = fixture_client()
   const page = retrieve_a_page(client, page_id)
@@ -259,7 +263,8 @@ pipeline default() {
       ok: false,
       status: 400,
       category: "validation_error",
-      body: "{\"code\":\"invalid_json\",\"message\":\"Malformed body\",\"request_id\":\"req-body\"}",
+      body:
+        "{\"code\":\"invalid_json\",\"message\":\"Malformed body\",\"request_id\":\"req-body\"}",
       operation: "synthetic_connector_envelope",
     },
   )
@@ -294,7 +299,11 @@ pipeline default() {
   expect(is_err(no_retry), "write without idempotency key returns the first failure")
   const no_retry_raw = unwrap_err(no_retry)
   expect_eq(no_retry_raw.status, 503, "write without idempotency keeps first status")
-  expect_eq(no_retry_raw.category, "overloaded", "write without idempotency keeps connector category")
+  expect_eq(
+    no_retry_raw.category,
+    "overloaded",
+    "write without idempotency keeps connector category",
+  )
   const no_retry_calls = http_mock_calls()
   expect_eq(len(no_retry_calls), 1, "write without idempotency is not retried")
   // ---------------------------------------------------------------
@@ -436,7 +445,11 @@ pipeline default() {
   expect_eq(len(template_calls), 2, "two GETs for template pagination")
   expect_contains(template_calls[0].url, "page_size=50", "template page_size forwarded")
   expect(template_calls[0].url.index_of("start_cursor=") < 0, "no template cursor on first page")
-  expect_contains(template_calls[1].url, "start_cursor=templates-page-2", "template cursor forwarded")
+  expect_contains(
+    template_calls[1].url,
+    "start_cursor=templates-page-2",
+    "template cursor forwarded",
+  )
   // ---------------------------------------------------------------
   // generated pagination metadata — body cursors + alternate items fields
   // ---------------------------------------------------------------
@@ -453,7 +466,10 @@ pipeline default() {
     "body",
     "data source query page size lives in request body",
   )
-  const query_next = pagination_next({has_more: true, next_cursor: "page-2-cursor"}, query_plan_value)
+  const query_next = pagination_next(
+    {has_more: true, next_cursor: "page-2-cursor"},
+    query_plan_value,
+  )
   expect_eq(query_next.body.start_cursor, "page-2-cursor", "body cursor directive returned")
   const template_plan = pagination_plan("list-data-source-templates")
   expect(template_plan != nil, "template list has generated pagination metadata")
