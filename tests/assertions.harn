@@ -5,10 +5,16 @@ pub fn expect(condition, message: string = "expectation failed") {
 
 /** Require that two smoke-test values are equal. */
 pub fn expect_eq(actual, expected, message: string = "values differ") {
-  require actual == expected, message + ": expected " + to_string(expected) + ", got " + to_string(actual)
+  require actual == expected,
+    message + ": expected " + to_string(expected) + ", got "
+    + to_string(
+    actual,
+  )
 }
 
 /** Require that a string value contains a substring. */
 pub fn expect_contains(haystack: string, needle: string, message: string = "substring missing") {
-  require haystack.index_of(needle) >= 0, message + ": expected to find " + needle + " in " + haystack
+  require haystack.index_of(needle) >= 0,
+    message + ": expected to find " + needle + " in "
+    + haystack
 }

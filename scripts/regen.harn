@@ -46,7 +46,12 @@ fn _format_generated(harness: Harness, source: string) -> string {
    */
   const result = host_call(
     "process.exec",
-    {mode: "argv", argv: [_harn_bin(harness), "fmt", path], cwd: ".", sandbox_profile: "unrestricted"},
+    {
+      mode: "argv",
+      argv: [_harn_bin(harness), "fmt", path],
+      cwd: ".",
+      sandbox_profile: "unrestricted",
+    },
   )
   if !result.success {
     if result.stderr != "" {

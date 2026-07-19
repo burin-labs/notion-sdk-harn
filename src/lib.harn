@@ -393,7 +393,10 @@ pub fn rate_limit_from_response(resp: dict) -> dict {
     limit: _header_ci(headers, "RateLimit-Limit")
       ?? _header_ci(headers, "X-RateLimit-Limit"),
     remaining: _header_ci(headers, "RateLimit-Remaining")
-      ?? _header_ci(headers, "X-RateLimit-Remaining"),
+      ?? _header_ci(
+      headers,
+      "X-RateLimit-Remaining",
+    ),
     reset: _header_ci(headers, "RateLimit-Reset")
       ?? _header_ci(headers, "X-RateLimit-Reset"),
   }
@@ -597,7 +600,12 @@ pub fn get_block_children(
 }
 
 /** Append block children */
-pub fn patch_block_children(client: dict, block_id, body, notion_version = nil) -> PatchBlockChildrenResponse {
+pub fn patch_block_children(
+  client: dict,
+  block_id,
+  body,
+  notion_version = nil,
+) -> PatchBlockChildrenResponse {
   let path_bindings = {block_id: block_id}
   let path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -647,7 +655,12 @@ pub fn list_comments(
   const resp = connector_http_json(
     "GET",
     url,
-    {headers: request_headers, provider: "notion", operation: "list_comments", retry: {max_attempts: 3}},
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "list_comments",
+      retry: {max_attempts: 3},
+    },
   )
   if !(resp.ok ?? false) {
     throw redact_response(resp)
@@ -1162,7 +1175,11 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
 }
 
 /** Retrieve a file upload */
-pub fn retrieve_file_upload(client: dict, file_upload_id, notion_version = nil) -> FileUploadObjectResponse {
+pub fn retrieve_file_upload(
+  client: dict,
+  file_upload_id,
+  notion_version = nil,
+) -> FileUploadObjectResponse {
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1191,7 +1208,11 @@ pub fn retrieve_file_upload(client: dict, file_upload_id, notion_version = nil) 
 }
 
 /** Complete a multi-part file upload */
-pub fn complete_file_upload(client: dict, file_upload_id, notion_version = nil) -> FileUploadObjectResponse {
+pub fn complete_file_upload(
+  client: dict,
+  file_upload_id,
+  notion_version = nil,
+) -> FileUploadObjectResponse {
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}/complete", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1220,7 +1241,12 @@ pub fn complete_file_upload(client: dict, file_upload_id, notion_version = nil) 
 }
 
 /** Upload a file */
-pub fn upload_file(client: dict, file_upload_id, body, notion_version = nil) -> FileUploadObjectResponse {
+pub fn upload_file(
+  client: dict,
+  file_upload_id,
+  body,
+  notion_version = nil,
+) -> FileUploadObjectResponse {
   let path_bindings = {file_upload_id: file_upload_id}
   let path = _interpolate("/v1/file_uploads/{file_upload_id}/send", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1400,7 +1426,12 @@ pub fn post_page(client: dict, body, notion_version = nil) -> any {
 }
 
 /** Retrieve a page */
-pub fn retrieve_a_page(client: dict, page_id, filter_properties = nil, notion_version = nil) -> any {
+pub fn retrieve_a_page(
+  client: dict,
+  page_id,
+  filter_properties = nil,
+  notion_version = nil,
+) -> any {
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}", path_bindings)
   let query_bindings = {filter_properties: filter_properties}
@@ -1454,7 +1485,12 @@ pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
 }
 
 /** Retrieve a page as markdown */
-pub fn retrieve_page_markdown(client: dict, page_id, include_transcript = nil, notion_version = nil) -> PageMarkdownResponse {
+pub fn retrieve_page_markdown(
+  client: dict,
+  page_id,
+  include_transcript = nil,
+  notion_version = nil,
+) -> PageMarkdownResponse {
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
   let query_bindings = {include_transcript: include_transcript}
@@ -1485,7 +1521,12 @@ pub fn retrieve_page_markdown(client: dict, page_id, include_transcript = nil, n
 }
 
 /** Update a page's content as markdown */
-pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -> PageMarkdownResponse {
+pub fn update_page_markdown(
+  client: dict,
+  page_id,
+  body,
+  notion_version = nil,
+) -> PageMarkdownResponse {
   let path_bindings = {page_id: page_id}
   let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1501,7 +1542,9 @@ pub fn update_page_markdown(client: dict, page_id, body, notion_version = nil) -
   if body_variant == nil {
     throw "update_page_markdown: polymorphic request body must be built with one of: update_page_markdown_insert_content, update_page_markdown_replace_content_range, update_page_markdown_update_content, update_page_markdown_replace_content"
   }
-  if !["InsertContent", "ReplaceContentRange", "UpdateContent", "ReplaceContent"].contains(body_variant) {
+  if !["InsertContent", "ReplaceContentRange", "UpdateContent", "ReplaceContent"].contains(
+    body_variant,
+  ) {
     throw "update_page_markdown: unknown request body variant " + to_string(body_variant)
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
@@ -1647,7 +1690,12 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
 }
 
 /** List all users */
-pub fn get_users(client: dict, start_cursor = nil, page_size = nil, notion_version = nil) -> GetUsersResponse {
+pub fn get_users(
+  client: dict,
+  start_cursor = nil,
+  page_size = nil,
+  notion_version = nil,
+) -> GetUsersResponse {
   let path_bindings = {}
   let path = _interpolate("/v1/users", path_bindings)
   let query_bindings = {start_cursor: start_cursor, page_size: page_size}
@@ -1660,7 +1708,12 @@ pub fn get_users(client: dict, start_cursor = nil, page_size = nil, notion_versi
   const resp = connector_http_json(
     "GET",
     url,
-    {headers: request_headers, provider: "notion", operation: "get_users", retry: {max_attempts: 3}},
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "get_users",
+      retry: {max_attempts: 3},
+    },
   )
   if !(resp.ok ?? false) {
     throw redact_response(resp)
@@ -1746,7 +1799,12 @@ pub fn list_views(
   const resp = connector_http_json(
     "GET",
     url,
-    {headers: request_headers, provider: "notion", operation: "list_views", retry: {max_attempts: 3}},
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "list_views",
+      retry: {max_attempts: 3},
+    },
   )
   if !(resp.ok ?? false) {
     throw redact_response(resp)
@@ -1811,7 +1869,11 @@ pub fn retrieve_a_view(client: dict, view_id, notion_version = nil) -> any {
 }
 
 /** Delete a view */
-pub fn delete_view(client: dict, view_id, notion_version = nil) -> PartialDataSourceViewObjectResponse {
+pub fn delete_view(
+  client: dict,
+  view_id,
+  notion_version = nil,
+) -> PartialDataSourceViewObjectResponse {
   let path_bindings = {view_id: view_id}
   let path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1822,7 +1884,12 @@ pub fn delete_view(client: dict, view_id, notion_version = nil) -> PartialDataSo
   const resp = connector_http_json(
     "DELETE",
     url,
-    {headers: request_headers, provider: "notion", operation: "delete_view", retry: {max_attempts: 3}},
+    {
+      headers: request_headers,
+      provider: "notion",
+      operation: "delete_view",
+      retry: {max_attempts: 3},
+    },
   )
   if !(resp.ok ?? false) {
     throw redact_response(resp)
@@ -1931,7 +1998,12 @@ pub fn get_view_query_results(
 }
 
 /** Delete a view query */
-pub fn delete_view_query(client: dict, view_id, query_id, notion_version = nil) -> DeletedViewQueryResponse {
+pub fn delete_view_query(
+  client: dict,
+  view_id,
+  query_id,
+  notion_version = nil,
+) -> DeletedViewQueryResponse {
   let path_bindings = {view_id: view_id, query_id: query_id}
   let path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
   let url = _join_url(client.base_url, path)
