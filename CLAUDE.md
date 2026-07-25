@@ -1,4 +1,6 @@
 # CLAUDE.md
 
-Use [`AGENTS.md`](./AGENTS.md) for repo instructions. This file exists only so
-Claude Code finds the same guidance as other agents.
+See [AGENTS.md](AGENTS.md). It is the canonical guidance for this repo.
+
+This is a regular file rather than a symlink: this repo is a published Harn
+package, and the package installer rejects symlinks in package content.
