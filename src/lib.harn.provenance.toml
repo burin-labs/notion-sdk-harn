@@ -1,0 +1,5 @@
+schema_version = 1
+fixture_sha256 = "1acaa25d1e0ceab03e38f1f71deb8b2d63fd83a7d974ce32ed27e1342714af20"
+generator_commit = "f1c8eab3efc5f01dce0670ee4c4e39fcf6d852c1"
+regen_sha256 = "e5eb8c32cb9b71bd22761212b6f9cefdb206016b0ff72afe12ce1285822ce6da"
+output_sha256 = "ea3b3c6b6786018f4ba3f9f855913e7b858da3ce85eccfbc34698cd09d96b0cf"

@@ -3,108 +3,37 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
   merge_group:
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
-  harn:
-    name: Harn
+  package:
+    uses: burin-labs/.github/.github/workflows/harn-package.yml@1acf9aba857a8eb512014d7097bfb22b2e751ff8
+
+  generated-sdk:
+    name: Generated SDK and consumer smoke
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.0
-
-      - name: Read Harn version
-        id: harn-version
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(tr -d '[:space:]' < .harn-version)"
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
-
-      - name: Cache harn-cli
-        uses: actions/cache@v6.1.0
-        with:
-          path: |
-            .harn/ci-harn/${{ steps.harn-version.outputs.version }}
-          key: harn-cli-${{ runner.os }}-${{ runner.arch }}-${{ steps.harn-version.outputs.version }}-${{ hashFiles('.harn-version') }}
-          restore-keys: |
-            harn-cli-${{ runner.os }}-${{ runner.arch }}-${{ steps.harn-version.outputs.version }}-
-
-      - name: Install harn-cli
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ steps.harn-version.outputs.version }}"
-          tag="v${version#v}"
-          case "${RUNNER_OS}-${RUNNER_ARCH}" in
-            Linux-X64) asset="harn-x86_64-unknown-linux-gnu.tar.gz" ;;
-            Linux-ARM64) asset="harn-aarch64-unknown-linux-gnu.tar.gz" ;;
-            *)
-              echo "unsupported runner for Harn release binary: ${RUNNER_OS}-${RUNNER_ARCH}" >&2
-              exit 1
-              ;;
-          esac
-          harn_root="${GITHUB_WORKSPACE}/.harn/ci-harn/${version}"
-          if [[ ! -x "${harn_root}/bin/harn" ]]; then
-            mkdir -p "${harn_root}/bin"
-            curl -fsSL \
-              -o "${RUNNER_TEMP}/${asset}" \
-              "https://github.com/burin-labs/harn/releases/download/${tag}/${asset}"
-            curl -fsSL \
-              -o "${RUNNER_TEMP}/SHA256SUMS" \
-              "https://github.com/burin-labs/harn/releases/download/${tag}/SHA256SUMS"
-            (cd "${RUNNER_TEMP}" && grep "  ${asset}$" SHA256SUMS | sha256sum -c -)
-            tar -xzf "${RUNNER_TEMP}/${asset}" -C "${harn_root}/bin"
-          fi
-          echo "${harn_root}/bin" >> "${GITHUB_PATH}"
-          echo "HARN_BIN=${harn_root}/bin/harn" >> "${GITHUB_ENV}"
-
-      - name: Show Harn version
-        run: harn --version
-
-      - name: Install Harn dependencies
-        run: harn install --locked
-
-      - name: Check package manifest
-        run: harn package check
-
-      - name: Check
-        run: harn check src scripts tests
-
-      - name: Lint
-        run: harn lint src scripts tests
-
-      - name: Format
-        run: harn fmt --check src scripts tests
-
-      - name: Regen drift check
-        run: harn run scripts/regen.harn
-
-      - name: Recorded smoke tests
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Install pinned Harn
+        uses: burin-labs/harn/.github/actions/setup-harn@e2089cd9628995bf2080cd1515086a891dff34f4
+      - name: Check generated SDK provenance
+        run: harn run scripts/check_generated_provenance.harn
+      - name: Run recorded smoke tests
         run: harn run tests/recorded/notion_sdk_smoke.harn
-
-      - name: Package install smoke
+      - name: Smoke-test package installation
         shell: bash
         run: |
           set -euo pipefail
           smoke_root="$(mktemp -d)"
           trap 'rm -rf "$smoke_root"' EXIT
-          cat > "$smoke_root/harn.toml" <<'EOF'
-          [package]
-          name = "notion-sdk-harn-consumer-smoke"
-          version = "0.0.0"
-          EOF
           cd "$smoke_root"
+          harn new package consumer
+          cd consumer
           harn add "$GITHUB_WORKSPACE@HEAD"
           harn install --locked
           cat > smoke.harn <<'EOF'
@@ -119,16 +48,14 @@ jobs:
           EOF
           harn check smoke.harn
 
-  ci-status:
+  status:
     name: CI status
     if: always()
-    needs: [harn]
+    needs: [package, generated-sdk]
     runs-on: ubuntu-latest
     steps:
-      - name: Check for failures
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "One or more CI jobs failed"
-            exit 1
-          fi
-          echo "All CI jobs passed or were skipped"
+      - name: Enforce required jobs
+        env:
+          PACKAGE_RESULT: ${{ needs.package.result }}
+          SDK_RESULT: ${{ needs.generated-sdk.result }}
+        run: test "$PACKAGE_RESULT" = success && test "$SDK_RESULT" = success

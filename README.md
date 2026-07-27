@@ -199,14 +199,17 @@ you intentionally adopt a new Notion API version.
 ```sh
 harn install --locked
 harn run scripts/regen.harn -- --apply
-harn run scripts/regen.harn
+harn run scripts/check_generated_provenance.harn
 ```
 
 This reads the pinned `tests/fixtures/notion.openapi.json` and rewrites
 `src/lib.harn` via [harn-openapi](https://github.com/burin-labs/harn-openapi).
 The current generator ref is the `harn-openapi` revision pinned in
-`harn.toml` and `harn.lock`. The second command is the drift check used by CI:
-it exits non-zero when the committed SDK output is missing or stale.
+`harn.toml` and `harn.lock`. Apply mode also rewrites
+`src/lib.harn.provenance.toml`; the second command is CI's fast, fail-closed
+check of the fixture hash, locked generator commit, regeneration-program hash,
+and generated-output hash. Changing any semantic input requires one explicit
+regeneration instead of rerunning unchanged million-byte codegen on every PR.
 The generated SDK opts into the shared Harn connector HTTP policy transport:
 safe/idempotent operations use bounded retries, unsafe writes do not retry
 unless the OpenAPI operation exposes an `Idempotency-Key` parameter, and
@@ -223,7 +226,7 @@ harn package check
 harn check src scripts tests
 harn lint src scripts tests
 harn fmt --check src scripts tests
-harn run scripts/regen.harn
+harn run scripts/check_generated_provenance.harn
 harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
@@ -240,7 +243,7 @@ harn package check
 harn check src scripts tests
 harn lint src scripts tests
 harn fmt --check src scripts tests
-harn run scripts/regen.harn
+harn run scripts/check_generated_provenance.harn
 harn run tests/recorded/notion_sdk_smoke.harn
 ```
 
