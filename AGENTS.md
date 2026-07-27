@@ -9,8 +9,10 @@ This repo is the pure-Harn outbound Notion REST SDK. When docs disagree, prefer
   `harn-openapi`.
 - Fix generated behavior in `harn-openapi` or the pinned OpenAPI fixture, then
   run `scripts/regen.harn`. Do not hand-edit `src/lib.harn`.
-- Hand-maintained code lives in `src/helpers.harn`, `scripts/regen.harn`, and
-  `tests/`.
+- `src/lib.harn.provenance.toml` records the fixture, generator commit,
+  regeneration program, and generated output identities. Regeneration owns
+  both files; CI verifies the receipt without rerunning unchanged codegen.
+- Hand-maintained code lives in `src/helpers.harn`, `scripts/`, and `tests/`.
 - Inbound webhook handling belongs in `harn-notion-connector`, not this SDK.
 
 ## Naming and layout
@@ -36,7 +38,7 @@ harn package check
 harn check src scripts tests
 harn lint src scripts tests
 harn fmt --check src scripts tests
-harn run scripts/regen.harn
+harn run scripts/check_generated_provenance.harn
 harn run tests/recorded/notion_sdk_smoke.harn
 ```
 

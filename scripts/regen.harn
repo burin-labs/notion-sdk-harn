@@ -1,3 +1,9 @@
+import {
+  build_generated_provenance,
+  read_generated_provenance,
+  verify_generated_provenance,
+  write_generated_provenance,
+} from "./lib/generated_provenance"
 // Regenerate the SDK from the pinned Notion OpenAPI fixture.
 //
 // Reads the pinned Notion OpenAPI fixture, runs it through the
@@ -17,6 +23,10 @@ import { codegen_module, operations, parse } from "harn-openapi/default"
 const FIXTURE_PATH = "tests/fixtures/notion.openapi.json"
 
 const OUTPUT_PATH = "src/lib.harn"
+
+const PROVENANCE_PATH = "src/lib.harn.provenance.toml"
+
+type ProcessResult = {success: bool, stderr: string}
 
 const CODEGEN_OPTIONS = {
   module_name: "notion",
@@ -44,7 +54,7 @@ fn _format_generated(harness: Harness, source: string) -> string {
    * rejects this nested Harn formatter when the parent also tries to wrap it,
    * so promote only the checksum-pinned formatter subprocess.
    */
-  const result = host_call(
+  const result: ProcessResult = host_call(
     "process.exec",
     {
       mode: "argv",
@@ -130,6 +140,11 @@ pipeline default() {
   }
   if apply_mode {
     harness.fs.write_text(OUTPUT_PATH, generated)
+    write_generated_provenance(
+      harness,
+      PROVENANCE_PATH,
+      build_generated_provenance(harness, generated),
+    )
     harness.stdio.println("wrote ${OUTPUT_PATH} (${len(generated)} bytes)")
     if current == "" {
       harness.stdio.println("  (was empty)")
@@ -139,6 +154,10 @@ pipeline default() {
       harness.stdio.println("  (replaced ${len(current)} bytes -> ${len(generated)} bytes)")
     }
   } else if current == generated {
+    verify_generated_provenance(
+      read_generated_provenance(harness, PROVENANCE_PATH),
+      build_generated_provenance(harness, generated),
+    )
     harness.stdio.println("${OUTPUT_PATH} is up to date.")
   } else if current == "" {
     harness.stdio.println("${OUTPUT_PATH} does not exist yet.")

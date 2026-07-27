@@ -21,8 +21,8 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Install pinned Harn
         uses: burin-labs/harn/.github/actions/setup-harn@e2089cd9628995bf2080cd1515086a891dff34f4
-      - name: Check generated SDK drift
-        run: harn run scripts/regen.harn
+      - name: Check generated SDK provenance
+        run: harn run scripts/check_generated_provenance.harn
       - name: Run recorded smoke tests
         run: harn run tests/recorded/notion_sdk_smoke.harn
       - name: Smoke-test package installation
