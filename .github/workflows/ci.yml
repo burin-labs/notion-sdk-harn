@@ -55,7 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enforce required jobs
-        env:
-          PACKAGE_RESULT: ${{ needs.package.result }}
-          SDK_RESULT: ${{ needs.generated-sdk.result }}
-        run: test "$PACKAGE_RESULT" = success && test "$SDK_RESULT" = success
+        uses: burin-labs/.github/.github/actions/require-successful-needs@c3d3025db6297d736400911029f34f7983744deb
+        with:
+          results-json: ${{ toJSON(needs.*.result) }}
