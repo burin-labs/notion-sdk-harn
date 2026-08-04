@@ -42,8 +42,8 @@ fn fixture_client() {
 }
 
 /** Read a recorded fixture body by basename from an already-resolved directory. */
-fn fixture_body(harness: HarnessFs, dir: string, name: string) -> string {
-  return harness.read_text(dir + "/" + name)
+fn fixture_body(fs: HarnessFs, dir: string, name: string) -> string {
+  return fs.read_text(dir + "/" + name)
 }
 
 @test
