@@ -12,12 +12,16 @@ type GeneratorLockPackage = {name: string, commit?: string}
 
 type GeneratorLock = {package: list<GeneratorLockPackage>}
 
-fn _repo_root() -> string {
-  return source_dir() + "/../.."
+fn _repo_root(harness: HarnessFs) -> string {
+  return harness.source_dir() + "/../.."
 }
 
-fn _generator_commit(harness: Harness) -> string {
-  const lock = read_toml_typed<GeneratorLock>(_repo_root() + "/harn.lock", schema_of(GeneratorLock))
+fn _generator_commit(harness: HarnessFs) -> string {
+  const lock = read_toml_typed<GeneratorLock>(
+    harness,
+    _repo_root(harness) + "/harn.lock",
+    schema_of(GeneratorLock),
+  )
   for package in lock.package ?? [] {
     if package.name == "harn-openapi" {
       const commit = to_string(package.commit ?? "")
@@ -30,13 +34,16 @@ fn _generator_commit(harness: Harness) -> string {
   throw "generated provenance: harn-openapi is missing from harn.lock"
 }
 
-pub fn build_generated_provenance(harness: Harness, output_source: string) -> GeneratedProvenance {
-  const root = _repo_root()
+pub fn build_generated_provenance(
+  harness: HarnessFs,
+  output_source: string,
+) -> GeneratedProvenance {
+  const root = _repo_root(harness)
   return {
     schema_version: 1,
-    fixture_sha256: sha256(harness.fs.read_text(root + "/tests/fixtures/notion.openapi.json")),
+    fixture_sha256: sha256(harness.read_text(root + "/tests/fixtures/notion.openapi.json")),
     generator_commit: _generator_commit(harness),
-    regen_sha256: sha256(harness.fs.read_text(root + "/scripts/regen.harn")),
+    regen_sha256: sha256(harness.read_text(root + "/scripts/regen.harn")),
     output_sha256: sha256(output_source),
   }
 }
@@ -57,15 +64,19 @@ fn _render(provenance: GeneratedProvenance) -> string {
     + "\"\n"
 }
 
-pub fn write_generated_provenance(harness: Harness, path: string, provenance: GeneratedProvenance) {
-  harness.fs.write_text(path, _render(provenance))
+pub fn write_generated_provenance(
+  harness: HarnessFs,
+  path: string,
+  provenance: GeneratedProvenance,
+) {
+  harness.write_text(path, _render(provenance))
 }
 
-pub fn read_generated_provenance(harness: Harness, path: string) -> GeneratedProvenance {
-  if !harness.fs.exists(path) {
+pub fn read_generated_provenance(harness: HarnessFs, path: string) -> GeneratedProvenance {
+  if !harness.exists(path) {
     throw "generated provenance: missing ${path}; run harn run scripts/regen.harn -- --apply"
   }
-  return read_toml_typed<GeneratedProvenance>(path, schema_of(GeneratedProvenance))
+  return read_toml_typed<GeneratedProvenance>(harness, path, schema_of(GeneratedProvenance))
 }
 
 pub fn verify_generated_provenance(actual: GeneratedProvenance, expected: GeneratedProvenance) {

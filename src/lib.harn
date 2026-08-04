@@ -216,8 +216,8 @@ fn _append_cookie_header(headers: dict, name: string, value) -> dict {
   if value == nil {
     return headers
   }
-  let pair = url_encode(name) + "=" + url_encode(to_string(value))
-  let existing = headers.get("Cookie") ?? headers.get("cookie")
+  const pair = url_encode(name) + "=" + url_encode(to_string(value))
+  const existing = headers.get("Cookie") ?? headers.get("cookie")
   if existing == nil || existing == "" {
     return {...headers, Cookie: pair}
   }
@@ -225,9 +225,9 @@ fn _append_cookie_header(headers: dict, name: string, value) -> dict {
 }
 
 /** Build a token-provider hook backed by the active connector SecretProvider. */
-pub fn token_from_secret(secret_id: string) {
+pub fn token_from_secret(secrets: HarnessSecrets, secret_id: string) {
   return fn() {
-    let value = secret_get(secret_id)
+    const value = secrets.read(secret_id)
     if value == nil {
       return ""
     }
@@ -236,13 +236,13 @@ pub fn token_from_secret(secret_id: string) {
 }
 
 /** Build an api-key-provider hook backed by the active connector SecretProvider. */
-pub fn api_key_from_secret(secret_ids: dict) {
+pub fn api_key_from_secret(secrets: HarnessSecrets, secret_ids: dict) {
   return fn(scheme_name) {
-    let secret_id = secret_ids.get(scheme_name)
+    const secret_id = secret_ids.get(scheme_name)
     if secret_id == nil {
       return ""
     }
-    let value = secret_get(secret_id)
+    const value = secrets.read(secret_id)
     if value == nil {
       return ""
     }
@@ -251,7 +251,7 @@ pub fn api_key_from_secret(secret_ids: dict) {
 }
 
 fn _client_token(client: dict) -> string {
-  let provider = client.get("token_provider")
+  const provider = client.get("token_provider")
   if provider != nil {
     return to_string(provider())
   }
@@ -259,7 +259,7 @@ fn _client_token(client: dict) -> string {
 }
 
 fn _client_api_key(client: dict, scheme_name: string) -> string {
-  let provider = client.get("api_key_provider")
+  const provider = client.get("api_key_provider")
   if provider != nil {
     return to_string(provider(scheme_name))
   }
@@ -267,9 +267,9 @@ fn _client_api_key(client: dict, scheme_name: string) -> string {
 }
 
 fn _client_basic(client: dict) -> dict {
-  let provider = client.get("basic_provider")
+  const provider = client.get("basic_provider")
   if provider != nil {
-    let provided = provider()
+    const provided = provider()
     if type_of(provided) == "dict" {
       return {user: provided.get("user") ?? "", password: provided.get("password") ?? ""}
     }
@@ -316,11 +316,11 @@ pub fn pagination_plan(operation_id: string) -> dict? {
 
 /** Extract the items list from `response` according to `plan`. */
 pub fn pagination_items(response: dict, plan: dict) -> list {
-  let field = plan.get("items_field")
+  const field = plan.get("items_field")
   if field == nil {
     return []
   }
-  let value = response.get(field)
+  const value = response.get(field)
   if type_of(value) == "list" {
     return value
   }
@@ -333,21 +333,21 @@ pub fn pagination_items(response: dict, plan: dict) -> list {
  * into the next call, or a `url` to follow (next-link style).
  */
 pub fn pagination_next(response: dict, plan: dict) -> dict {
-  let kind = plan.get("kind")
+  const kind = plan.get("kind")
   if kind == "cursor" {
-    let cursor_field = plan.get("cursor_response_field")
-    let cursor = if cursor_field == nil {
+    const cursor_field = plan.get("cursor_response_field")
+    const cursor = if cursor_field == nil {
       nil
     } else {
       response.get(cursor_field)
     }
-    let has_more_field = plan.get("has_more_field")
-    let has_more = if has_more_field == nil {
+    const has_more_field = plan.get("has_more_field")
+    const has_more = if has_more_field == nil {
       cursor != nil
     } else {
       response.get(has_more_field)
     }
-    let field = plan.get("cursor_param")
+    const field = plan.get("cursor_param")
     if plan.get("cursor_location") == "body" {
       return {done: cursor == nil || !has_more, body: {[field]: cursor}}
     }
@@ -357,7 +357,7 @@ pub fn pagination_next(response: dict, plan: dict) -> dict {
     return {done: false, query: {}}
   }
   if kind == "next_link" {
-    let field = plan.get("next_link_field")
+    const field = plan.get("next_link_field")
     let url = if field == nil {
       nil
     } else {
@@ -386,7 +386,7 @@ fn _header_ci(headers: dict, wanted: string) {
 
 /** Extract status + standard rate-limit headers from a raw HTTP response. */
 pub fn rate_limit_from_response(resp: dict) -> dict {
-  let headers = resp.get("headers") ?? {}
+  const headers = resp.get("headers") ?? {}
   return {
     status: resp.get("status"),
     retry_after: _header_ci(headers, "Retry-After"),
@@ -404,7 +404,7 @@ pub fn rate_limit_from_response(resp: dict) -> dict {
 
 /** True if the response looks rate-limited (HTTP 429 or Retry-After set). */
 pub fn is_rate_limited_response(resp: dict) -> bool {
-  let headers = resp.get("headers") ?? {}
+  const headers = resp.get("headers") ?? {}
   return resp.get("status") == 429 || _header_ci(headers, "Retry-After") != nil
 }
 
@@ -423,8 +423,8 @@ fn _join_url(base_url: string, path: string) -> string {
   if path == "" {
     return base_url
   }
-  let base_has_slash = substring(base_url, len(base_url) - 1, len(base_url)) == "/"
-  let path_has_slash = starts_with(path, "/")
+  const base_has_slash = substring(base_url, len(base_url) - 1, len(base_url)) == "/"
+  const path_has_slash = starts_with(path, "/")
   if base_has_slash && path_has_slash {
     return substring(base_url, 0, len(base_url) - 1) + path
   }
@@ -461,15 +461,17 @@ fn _strip_codegen_variant(body) -> dict {
 }
 
 /** Retrieve a block */
-pub fn retrieve_a_block(client: dict, block_id, notion_version = nil) -> any {
-  let path_bindings = {block_id: block_id}
-  let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
+pub fn retrieve_a_block(harness: Harness, client: dict, block_id, notion_version = nil) -> any {
+  const path_bindings = {block_id: block_id}
+  const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -486,15 +488,17 @@ pub fn retrieve_a_block(client: dict, block_id, notion_version = nil) -> any {
 }
 
 /** Delete a block */
-pub fn delete_a_block(client: dict, block_id, notion_version = nil) -> any {
-  let path_bindings = {block_id: block_id}
-  let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
+pub fn delete_a_block(harness: Harness, client: dict, block_id, notion_version = nil) -> any {
+  const path_bindings = {block_id: block_id}
+  const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "DELETE",
     url,
     {
@@ -511,9 +515,9 @@ pub fn delete_a_block(client: dict, block_id, notion_version = nil) -> any {
 }
 
 /** Update a block */
-pub fn update_a_block(client: dict, block_id, body, notion_version = nil) -> any {
-  let path_bindings = {block_id: block_id}
-  let path = _interpolate("/v1/blocks/{block_id}", path_bindings)
+pub fn update_a_block(harness: Harness, client: dict, block_id, body, notion_version = nil) -> any {
+  const path_bindings = {block_id: block_id}
+  const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -532,6 +536,8 @@ pub fn update_a_block(client: dict, block_id, body, notion_version = nil) -> any
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -564,15 +570,16 @@ pub fn update_a_block_variant2(in_trash = nil) -> dict {
 
 /** Retrieve block children */
 pub fn get_block_children(
+  harness: Harness,
   client: dict,
   block_id,
   start_cursor = nil,
   page_size = nil,
   notion_version = nil,
 ) -> GetBlockChildrenResponse {
-  let path_bindings = {block_id: block_id}
-  let path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
-  let query_bindings = {start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {block_id: block_id}
+  const path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
+  const query_bindings = {start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -580,6 +587,8 @@ pub fn get_block_children(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -601,13 +610,14 @@ pub fn get_block_children(
 
 /** Append block children */
 pub fn patch_block_children(
+  harness: Harness,
   client: dict,
   block_id,
   body,
   notion_version = nil,
 ) -> PatchBlockChildrenResponse {
-  let path_bindings = {block_id: block_id}
-  let path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
+  const path_bindings = {block_id: block_id}
+  const path = _interpolate("/v1/blocks/{block_id}/children", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -615,6 +625,8 @@ pub fn patch_block_children(
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -637,15 +649,16 @@ pub fn patch_block_children(
 
 /** List comments */
 pub fn list_comments(
+  harness: Harness,
   client: dict,
   block_id,
   start_cursor = nil,
   page_size = nil,
   notion_version = nil,
 ) -> ListCommentsResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/comments", path_bindings)
-  let query_bindings = {block_id: block_id, start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {}
+  const path = _interpolate("/v1/comments", path_bindings)
+  const query_bindings = {block_id: block_id, start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -653,6 +666,8 @@ pub fn list_comments(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -673,9 +688,9 @@ pub fn list_comments(
 }
 
 /** Create a comment */
-pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
-  let path_bindings = {}
-  let path = _interpolate("/v1/comments", path_bindings)
+pub fn create_a_comment(harness: Harness, client: dict, body, notion_version = nil) -> any {
+  const path_bindings = {}
+  const path = _interpolate("/v1/comments", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -694,6 +709,8 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -712,38 +729,36 @@ pub fn create_a_comment(client: dict, body, notion_version = nil) -> any {
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn create_a_comment_variant1(parent: dict, rich_text: list) -> dict {
-  let body = {parent: parent, rich_text: rich_text, _variant: "Variant1"}
-  return body
+  return {parent: parent, rich_text: rich_text, _variant: "Variant1"}
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_comment_variant2(markdown: string, parent: dict) -> dict {
-  let body = {markdown: markdown, parent: parent, _variant: "Variant2"}
-  return body
+  return {markdown: markdown, parent: parent, _variant: "Variant2"}
 }
 
 /** Build a `Variant3` variant of the polymorphic request body. */
 pub fn create_a_comment_variant3(discussion_id: string, rich_text: list) -> dict {
-  let body = {discussion_id: discussion_id, rich_text: rich_text, _variant: "Variant3"}
-  return body
+  return {discussion_id: discussion_id, rich_text: rich_text, _variant: "Variant3"}
 }
 
 /** Build a `Variant4` variant of the polymorphic request body. */
 pub fn create_a_comment_variant4(discussion_id: string, markdown: string) -> dict {
-  let body = {discussion_id: discussion_id, markdown: markdown, _variant: "Variant4"}
-  return body
+  return {discussion_id: discussion_id, markdown: markdown, _variant: "Variant4"}
 }
 
 /** Retrieve a comment */
-pub fn retrieve_comment(client: dict, comment_id, notion_version = nil) -> any {
-  let path_bindings = {comment_id: comment_id}
-  let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
+pub fn retrieve_comment(harness: Harness, client: dict, comment_id, notion_version = nil) -> any {
+  const path_bindings = {comment_id: comment_id}
+  const path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -760,15 +775,17 @@ pub fn retrieve_comment(client: dict, comment_id, notion_version = nil) -> any {
 }
 
 /** Delete a comment */
-pub fn delete_a_comment(client: dict, comment_id, notion_version = nil) -> any {
-  let path_bindings = {comment_id: comment_id}
-  let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
+pub fn delete_a_comment(harness: Harness, client: dict, comment_id, notion_version = nil) -> any {
+  const path_bindings = {comment_id: comment_id}
+  const path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "DELETE",
     url,
     {
@@ -785,9 +802,15 @@ pub fn delete_a_comment(client: dict, comment_id, notion_version = nil) -> any {
 }
 
 /** Update a comment */
-pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) -> any {
-  let path_bindings = {comment_id: comment_id}
-  let path = _interpolate("/v1/comments/{comment_id}", path_bindings)
+pub fn update_a_comment(
+  harness: Harness,
+  client: dict,
+  comment_id,
+  body,
+  notion_version = nil,
+) -> any {
+  const path_bindings = {comment_id: comment_id}
+  const path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -806,6 +829,8 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -824,27 +849,26 @@ pub fn update_a_comment(client: dict, comment_id, body, notion_version = nil) ->
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn update_a_comment_variant1(rich_text: list) -> dict {
-  let body = {rich_text: rich_text, _variant: "Variant1"}
-  return body
+  return {rich_text: rich_text, _variant: "Variant1"}
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn update_a_comment_variant2(markdown: string) -> dict {
-  let body = {markdown: markdown, _variant: "Variant2"}
-  return body
+  return {markdown: markdown, _variant: "Variant2"}
 }
 
 /** List custom emojis */
 pub fn list_custom_emojis(
+  harness: Harness,
   client: dict,
   start_cursor = nil,
   page_size = nil,
   name = nil,
   notion_version = nil,
 ) -> ListCustomEmojisResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/custom_emojis", path_bindings)
-  let query_bindings = {start_cursor: start_cursor, page_size: page_size, name: name}
+  const path_bindings = {}
+  const path = _interpolate("/v1/custom_emojis", path_bindings)
+  const query_bindings = {start_cursor: start_cursor, page_size: page_size, name: name}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -852,6 +876,8 @@ pub fn list_custom_emojis(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -872,9 +898,9 @@ pub fn list_custom_emojis(
 }
 
 /** Create a data source */
-pub fn create_a_database(client: dict, body, notion_version = nil) -> any {
-  let path_bindings = {}
-  let path = _interpolate("/v1/data_sources", path_bindings)
+pub fn create_a_database(harness: Harness, client: dict, body, notion_version = nil) -> any {
+  const path_bindings = {}
+  const path = _interpolate("/v1/data_sources", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -882,6 +908,8 @@ pub fn create_a_database(client: dict, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -899,15 +927,22 @@ pub fn create_a_database(client: dict, body, notion_version = nil) -> any {
 }
 
 /** Retrieve a data source */
-pub fn retrieve_a_data_source(client: dict, data_source_id, notion_version = nil) -> any {
-  let path_bindings = {data_source_id: data_source_id}
-  let path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
+pub fn retrieve_a_data_source(
+  harness: Harness,
+  client: dict,
+  data_source_id,
+  notion_version = nil,
+) -> any {
+  const path_bindings = {data_source_id: data_source_id}
+  const path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -924,9 +959,15 @@ pub fn retrieve_a_data_source(client: dict, data_source_id, notion_version = nil
 }
 
 /** Update a data source */
-pub fn update_a_data_source(client: dict, data_source_id, body, notion_version = nil) -> any {
-  let path_bindings = {data_source_id: data_source_id}
-  let path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
+pub fn update_a_data_source(
+  harness: Harness,
+  client: dict,
+  data_source_id,
+  body,
+  notion_version = nil,
+) -> any {
+  const path_bindings = {data_source_id: data_source_id}
+  const path = _interpolate("/v1/data_sources/{data_source_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -934,6 +975,8 @@ pub fn update_a_data_source(client: dict, data_source_id, body, notion_version =
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -952,15 +995,16 @@ pub fn update_a_data_source(client: dict, data_source_id, body, notion_version =
 
 /** Query a data source */
 pub fn post_database_query(
+  harness: Harness,
   client: dict,
   data_source_id,
   body,
   filter_properties = nil,
   notion_version = nil,
 ) -> PostDatabaseQueryResponse {
-  let path_bindings = {data_source_id: data_source_id}
-  let path = _interpolate("/v1/data_sources/{data_source_id}/query", path_bindings)
-  let query_bindings = {filter_properties: filter_properties}
+  const path_bindings = {data_source_id: data_source_id}
+  const path = _interpolate("/v1/data_sources/{data_source_id}/query", path_bindings)
+  const query_bindings = {filter_properties: filter_properties}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -969,6 +1013,8 @@ pub fn post_database_query(
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -991,6 +1037,7 @@ pub fn post_database_query(
 
 /** List templates in a data source */
 pub fn list_data_source_templates(
+  harness: Harness,
   client: dict,
   data_source_id,
   name = nil,
@@ -998,9 +1045,9 @@ pub fn list_data_source_templates(
   page_size = nil,
   notion_version = nil,
 ) -> ListDataSourceTemplatesResponse {
-  let path_bindings = {data_source_id: data_source_id}
-  let path = _interpolate("/v1/data_sources/{data_source_id}/templates", path_bindings)
-  let query_bindings = {name: name, start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {data_source_id: data_source_id}
+  const path = _interpolate("/v1/data_sources/{data_source_id}/templates", path_bindings)
+  const query_bindings = {name: name, start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1008,6 +1055,8 @@ pub fn list_data_source_templates(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1028,9 +1077,9 @@ pub fn list_data_source_templates(
 }
 
 /** Create a database */
-pub fn create_database(client: dict, body, notion_version = nil) -> any {
-  let path_bindings = {}
-  let path = _interpolate("/v1/databases", path_bindings)
+pub fn create_database(harness: Harness, client: dict, body, notion_version = nil) -> any {
+  const path_bindings = {}
+  const path = _interpolate("/v1/databases", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1038,6 +1087,8 @@ pub fn create_database(client: dict, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1055,15 +1106,17 @@ pub fn create_database(client: dict, body, notion_version = nil) -> any {
 }
 
 /** Retrieve a database */
-pub fn retrieve_database(client: dict, database_id, notion_version = nil) -> any {
-  let path_bindings = {database_id: database_id}
-  let path = _interpolate("/v1/databases/{database_id}", path_bindings)
+pub fn retrieve_database(harness: Harness, client: dict, database_id, notion_version = nil) -> any {
+  const path_bindings = {database_id: database_id}
+  const path = _interpolate("/v1/databases/{database_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1080,9 +1133,15 @@ pub fn retrieve_database(client: dict, database_id, notion_version = nil) -> any
 }
 
 /** Update a database */
-pub fn update_database(client: dict, database_id, body, notion_version = nil) -> any {
-  let path_bindings = {database_id: database_id}
-  let path = _interpolate("/v1/databases/{database_id}", path_bindings)
+pub fn update_database(
+  harness: Harness,
+  client: dict,
+  database_id,
+  body,
+  notion_version = nil,
+) -> any {
+  const path_bindings = {database_id: database_id}
+  const path = _interpolate("/v1/databases/{database_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1090,6 +1149,8 @@ pub fn update_database(client: dict, database_id, body, notion_version = nil) ->
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -1108,15 +1169,16 @@ pub fn update_database(client: dict, database_id, body, notion_version = nil) ->
 
 /** List file uploads */
 pub fn list_file_uploads(
+  harness: Harness,
   client: dict,
   status = nil,
   start_cursor = nil,
   page_size = nil,
   notion_version = nil,
 ) -> ListFileUploadsResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/file_uploads", path_bindings)
-  let query_bindings = {status: status, start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {}
+  const path = _interpolate("/v1/file_uploads", path_bindings)
+  const query_bindings = {status: status, start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1124,6 +1186,8 @@ pub fn list_file_uploads(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1144,9 +1208,14 @@ pub fn list_file_uploads(
 }
 
 /** Create a file upload */
-pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObjectResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/file_uploads", path_bindings)
+pub fn create_file(
+  harness: Harness,
+  client: dict,
+  body,
+  notion_version = nil,
+) -> FileUploadObjectResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/file_uploads", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1154,6 +1223,8 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1176,18 +1247,21 @@ pub fn create_file(client: dict, body, notion_version = nil) -> FileUploadObject
 
 /** Retrieve a file upload */
 pub fn retrieve_file_upload(
+  harness: Harness,
   client: dict,
   file_upload_id,
   notion_version = nil,
 ) -> FileUploadObjectResponse {
-  let path_bindings = {file_upload_id: file_upload_id}
-  let path = _interpolate("/v1/file_uploads/{file_upload_id}", path_bindings)
+  const path_bindings = {file_upload_id: file_upload_id}
+  const path = _interpolate("/v1/file_uploads/{file_upload_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1209,18 +1283,21 @@ pub fn retrieve_file_upload(
 
 /** Complete a multi-part file upload */
 pub fn complete_file_upload(
+  harness: Harness,
   client: dict,
   file_upload_id,
   notion_version = nil,
 ) -> FileUploadObjectResponse {
-  let path_bindings = {file_upload_id: file_upload_id}
-  let path = _interpolate("/v1/file_uploads/{file_upload_id}/complete", path_bindings)
+  const path_bindings = {file_upload_id: file_upload_id}
+  const path = _interpolate("/v1/file_uploads/{file_upload_id}/complete", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1242,13 +1319,14 @@ pub fn complete_file_upload(
 
 /** Upload a file */
 pub fn upload_file(
+  harness: Harness,
   client: dict,
   file_upload_id,
   body,
   notion_version = nil,
 ) -> FileUploadObjectResponse {
-  let path_bindings = {file_upload_id: file_upload_id}
-  let path = _interpolate("/v1/file_uploads/{file_upload_id}/send", path_bindings)
+  const path_bindings = {file_upload_id: file_upload_id}
+  const path = _interpolate("/v1/file_uploads/{file_upload_id}/send", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1256,6 +1334,8 @@ pub fn upload_file(
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1277,9 +1357,14 @@ pub fn upload_file(
 }
 
 /** Introspect a token */
-pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectTokenResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/oauth/introspect", path_bindings)
+pub fn introspect_token(
+  harness: Harness,
+  client: dict,
+  body,
+  notion_version = nil,
+) -> IntrospectTokenResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/oauth/introspect", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
@@ -1287,6 +1372,8 @@ pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectT
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1308,9 +1395,14 @@ pub fn introspect_token(client: dict, body, notion_version = nil) -> IntrospectT
 }
 
 /** Revoke a token */
-pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/oauth/revoke", path_bindings)
+pub fn revoke_token(
+  harness: Harness,
+  client: dict,
+  body,
+  notion_version = nil,
+) -> RevokeTokenResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/oauth/revoke", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
@@ -1318,6 +1410,8 @@ pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResp
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1339,9 +1433,14 @@ pub fn revoke_token(client: dict, body, notion_version = nil) -> RevokeTokenResp
 }
 
 /** Exchange an authorization code for an access and refresh token */
-pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/oauth/token", path_bindings)
+pub fn create_a_token(
+  harness: Harness,
+  client: dict,
+  body,
+  notion_version = nil,
+) -> CreateATokenResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/oauth/token", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_basic_auth(client)
   if notion_version != nil {
@@ -1360,6 +1459,8 @@ pub fn create_a_token(client: dict, body, notion_version = nil) -> CreateATokenR
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1394,14 +1495,13 @@ pub fn create_a_token_variant1(code: string, external_account = nil, redirect_ur
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_token_variant2(refresh_token: string) -> dict {
-  let body = {grant_type: "refresh_token", refresh_token: refresh_token, _variant: "Variant2"}
-  return body
+  return {grant_type: "refresh_token", refresh_token: refresh_token, _variant: "Variant2"}
 }
 
 /** Create a page */
-pub fn post_page(client: dict, body, notion_version = nil) -> any {
-  let path_bindings = {}
-  let path = _interpolate("/v1/pages", path_bindings)
+pub fn post_page(harness: Harness, client: dict, body, notion_version = nil) -> any {
+  const path_bindings = {}
+  const path = _interpolate("/v1/pages", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1409,6 +1509,8 @@ pub fn post_page(client: dict, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1427,14 +1529,15 @@ pub fn post_page(client: dict, body, notion_version = nil) -> any {
 
 /** Retrieve a page */
 pub fn retrieve_a_page(
+  harness: Harness,
   client: dict,
   page_id,
   filter_properties = nil,
   notion_version = nil,
 ) -> any {
-  let path_bindings = {page_id: page_id}
-  let path = _interpolate("/v1/pages/{page_id}", path_bindings)
-  let query_bindings = {filter_properties: filter_properties}
+  const path_bindings = {page_id: page_id}
+  const path = _interpolate("/v1/pages/{page_id}", path_bindings)
+  const query_bindings = {filter_properties: filter_properties}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1442,6 +1545,8 @@ pub fn retrieve_a_page(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1458,9 +1563,9 @@ pub fn retrieve_a_page(
 }
 
 /** Update page */
-pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
-  let path_bindings = {page_id: page_id}
-  let path = _interpolate("/v1/pages/{page_id}", path_bindings)
+pub fn patch_page(harness: Harness, client: dict, page_id, body, notion_version = nil) -> any {
+  const path_bindings = {page_id: page_id}
+  const path = _interpolate("/v1/pages/{page_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1468,6 +1573,8 @@ pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -1486,14 +1593,15 @@ pub fn patch_page(client: dict, page_id, body, notion_version = nil) -> any {
 
 /** Retrieve a page as markdown */
 pub fn retrieve_page_markdown(
+  harness: Harness,
   client: dict,
   page_id,
   include_transcript = nil,
   notion_version = nil,
 ) -> PageMarkdownResponse {
-  let path_bindings = {page_id: page_id}
-  let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
-  let query_bindings = {include_transcript: include_transcript}
+  const path_bindings = {page_id: page_id}
+  const path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
+  const query_bindings = {include_transcript: include_transcript}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1501,6 +1609,8 @@ pub fn retrieve_page_markdown(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1522,13 +1632,14 @@ pub fn retrieve_page_markdown(
 
 /** Update a page's content as markdown */
 pub fn update_page_markdown(
+  harness: Harness,
   client: dict,
   page_id,
   body,
   notion_version = nil,
 ) -> PageMarkdownResponse {
-  let path_bindings = {page_id: page_id}
-  let path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
+  const path_bindings = {page_id: page_id}
+  const path = _interpolate("/v1/pages/{page_id}/markdown", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1549,6 +1660,8 @@ pub fn update_page_markdown(
   }
   const body_str = json_stringify(_strip_codegen_variant(body))
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -1571,36 +1684,32 @@ pub fn update_page_markdown(
 
 /** Build a `InsertContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_insert_content(insert_content: dict) -> dict {
-  let body = {insert_content: insert_content, type: "insert_content", _variant: "InsertContent"}
-  return body
+  return {insert_content: insert_content, type: "insert_content", _variant: "InsertContent"}
 }
 
 /** Build a `ReplaceContentRange` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content_range(replace_content_range: dict) -> dict {
-  let body = {
+  return {
     replace_content_range: replace_content_range,
     type: "replace_content_range",
     _variant: "ReplaceContentRange",
   }
-  return body
 }
 
 /** Build a `UpdateContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_update_content(update_content: dict) -> dict {
-  let body = {type: "update_content", update_content: update_content, _variant: "UpdateContent"}
-  return body
+  return {type: "update_content", update_content: update_content, _variant: "UpdateContent"}
 }
 
 /** Build a `ReplaceContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content(replace_content: dict) -> dict {
-  let body = {replace_content: replace_content, type: "replace_content", _variant: "ReplaceContent"}
-  return body
+  return {replace_content: replace_content, type: "replace_content", _variant: "ReplaceContent"}
 }
 
 /** Move a page */
-pub fn move_page(client: dict, page_id, body, notion_version = nil) -> any {
-  let path_bindings = {page_id: page_id}
-  let path = _interpolate("/v1/pages/{page_id}/move", path_bindings)
+pub fn move_page(harness: Harness, client: dict, page_id, body, notion_version = nil) -> any {
+  const path_bindings = {page_id: page_id}
+  const path = _interpolate("/v1/pages/{page_id}/move", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1608,6 +1717,8 @@ pub fn move_page(client: dict, page_id, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1626,6 +1737,7 @@ pub fn move_page(client: dict, page_id, body, notion_version = nil) -> any {
 
 /** Retrieve a page property item */
 pub fn retrieve_a_page_property(
+  harness: Harness,
   client: dict,
   page_id,
   property_id,
@@ -1633,9 +1745,9 @@ pub fn retrieve_a_page_property(
   page_size = nil,
   notion_version = nil,
 ) -> any {
-  let path_bindings = {page_id: page_id, property_id: property_id}
-  let path = _interpolate("/v1/pages/{page_id}/properties/{property_id}", path_bindings)
-  let query_bindings = {start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {page_id: page_id, property_id: property_id}
+  const path = _interpolate("/v1/pages/{page_id}/properties/{property_id}", path_bindings)
+  const query_bindings = {start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1643,6 +1755,8 @@ pub fn retrieve_a_page_property(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1659,9 +1773,14 @@ pub fn retrieve_a_page_property(
 }
 
 /** Search by title */
-pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/search", path_bindings)
+pub fn post_search(
+  harness: Harness,
+  client: dict,
+  body,
+  notion_version = nil,
+) -> PostSearchResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/search", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1669,6 +1788,8 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1691,14 +1812,15 @@ pub fn post_search(client: dict, body, notion_version = nil) -> PostSearchRespon
 
 /** List all users */
 pub fn get_users(
+  harness: Harness,
   client: dict,
   start_cursor = nil,
   page_size = nil,
   notion_version = nil,
 ) -> GetUsersResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/users", path_bindings)
-  let query_bindings = {start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {}
+  const path = _interpolate("/v1/users", path_bindings)
+  const query_bindings = {start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1706,6 +1828,8 @@ pub fn get_users(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1726,15 +1850,17 @@ pub fn get_users(
 }
 
 /** Retrieve your token's bot user */
-pub fn get_self(client: dict, notion_version = nil) -> UserObjectResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/users/me", path_bindings)
+pub fn get_self(harness: Harness, client: dict, notion_version = nil) -> UserObjectResponse {
+  const path_bindings = {}
+  const path = _interpolate("/v1/users/me", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "get_self", retry: {max_attempts: 3}},
@@ -1750,15 +1876,22 @@ pub fn get_self(client: dict, notion_version = nil) -> UserObjectResponse {
 }
 
 /** Retrieve a user */
-pub fn get_user(client: dict, user_id, notion_version = nil) -> UserObjectResponse {
-  let path_bindings = {user_id: user_id}
-  let path = _interpolate("/v1/users/{user_id}", path_bindings)
+pub fn get_user(
+  harness: Harness,
+  client: dict,
+  user_id,
+  notion_version = nil,
+) -> UserObjectResponse {
+  const path_bindings = {user_id: user_id}
+  const path = _interpolate("/v1/users/{user_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {headers: request_headers, provider: "notion", operation: "get_user", retry: {max_attempts: 3}},
@@ -1775,6 +1908,7 @@ pub fn get_user(client: dict, user_id, notion_version = nil) -> UserObjectRespon
 
 /** List views */
 pub fn list_views(
+  harness: Harness,
   client: dict,
   database_id = nil,
   data_source_id = nil,
@@ -1782,9 +1916,9 @@ pub fn list_views(
   page_size = nil,
   notion_version = nil,
 ) -> ListViewsResponse {
-  let path_bindings = {}
-  let path = _interpolate("/v1/views", path_bindings)
-  let query_bindings = {
+  const path_bindings = {}
+  const path = _interpolate("/v1/views", path_bindings)
+  const query_bindings = {
     database_id: database_id,
     data_source_id: data_source_id,
     start_cursor: start_cursor,
@@ -1797,6 +1931,8 @@ pub fn list_views(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1817,9 +1953,9 @@ pub fn list_views(
 }
 
 /** Create a view */
-pub fn create_view(client: dict, body, notion_version = nil) -> any {
-  let path_bindings = {}
-  let path = _interpolate("/v1/views", path_bindings)
+pub fn create_view(harness: Harness, client: dict, body, notion_version = nil) -> any {
+  const path_bindings = {}
+  const path = _interpolate("/v1/views", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1827,6 +1963,8 @@ pub fn create_view(client: dict, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1844,15 +1982,17 @@ pub fn create_view(client: dict, body, notion_version = nil) -> any {
 }
 
 /** Retrieve a view */
-pub fn retrieve_a_view(client: dict, view_id, notion_version = nil) -> any {
-  let path_bindings = {view_id: view_id}
-  let path = _interpolate("/v1/views/{view_id}", path_bindings)
+pub fn retrieve_a_view(harness: Harness, client: dict, view_id, notion_version = nil) -> any {
+  const path_bindings = {view_id: view_id}
+  const path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1870,18 +2010,21 @@ pub fn retrieve_a_view(client: dict, view_id, notion_version = nil) -> any {
 
 /** Delete a view */
 pub fn delete_view(
+  harness: Harness,
   client: dict,
   view_id,
   notion_version = nil,
 ) -> PartialDataSourceViewObjectResponse {
-  let path_bindings = {view_id: view_id}
-  let path = _interpolate("/v1/views/{view_id}", path_bindings)
+  const path_bindings = {view_id: view_id}
+  const path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "DELETE",
     url,
     {
@@ -1902,9 +2045,9 @@ pub fn delete_view(
 }
 
 /** Update a view */
-pub fn update_a_view(client: dict, view_id, body, notion_version = nil) -> any {
-  let path_bindings = {view_id: view_id}
-  let path = _interpolate("/v1/views/{view_id}", path_bindings)
+pub fn update_a_view(harness: Harness, client: dict, view_id, body, notion_version = nil) -> any {
+  const path_bindings = {view_id: view_id}
+  const path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1912,6 +2055,8 @@ pub fn update_a_view(client: dict, view_id, body, notion_version = nil) -> any {
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "PATCH",
     url,
     {
@@ -1929,9 +2074,15 @@ pub fn update_a_view(client: dict, view_id, body, notion_version = nil) -> any {
 }
 
 /** Create a view query */
-pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> ViewQueryResponse {
-  let path_bindings = {view_id: view_id}
-  let path = _interpolate("/v1/views/{view_id}/queries", path_bindings)
+pub fn create_view_query(
+  harness: Harness,
+  client: dict,
+  view_id,
+  body,
+  notion_version = nil,
+) -> ViewQueryResponse {
+  const path_bindings = {view_id: view_id}
+  const path = _interpolate("/v1/views/{view_id}/queries", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
@@ -1939,6 +2090,8 @@ pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> V
   }
   const body_str = json_stringify(body)
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "POST",
     url,
     {
@@ -1961,6 +2114,7 @@ pub fn create_view_query(client: dict, view_id, body, notion_version = nil) -> V
 
 /** Get view query results */
 pub fn get_view_query_results(
+  harness: Harness,
   client: dict,
   view_id,
   query_id,
@@ -1968,9 +2122,9 @@ pub fn get_view_query_results(
   page_size = nil,
   notion_version = nil,
 ) -> GetViewQueryResultsResponse {
-  let path_bindings = {view_id: view_id, query_id: query_id}
-  let path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
-  let query_bindings = {start_cursor: start_cursor, page_size: page_size}
+  const path_bindings = {view_id: view_id, query_id: query_id}
+  const path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
+  const query_bindings = {start_cursor: start_cursor, page_size: page_size}
   let url = _join_url(client.base_url, path)
   url = url + _query_string(query_bindings)
   let request_headers = _headers_bearer_auth(client)
@@ -1978,6 +2132,8 @@ pub fn get_view_query_results(
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "GET",
     url,
     {
@@ -1999,19 +2155,22 @@ pub fn get_view_query_results(
 
 /** Delete a view query */
 pub fn delete_view_query(
+  harness: Harness,
   client: dict,
   view_id,
   query_id,
   notion_version = nil,
 ) -> DeletedViewQueryResponse {
-  let path_bindings = {view_id: view_id, query_id: query_id}
-  let path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
+  const path_bindings = {view_id: view_id, query_id: query_id}
+  const path = _interpolate("/v1/views/{view_id}/queries/{query_id}", path_bindings)
   let url = _join_url(client.base_url, path)
   let request_headers = _headers_bearer_auth(client)
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
   const resp = connector_http_json(
+    harness.clock,
+    harness.net,
     "DELETE",
     url,
     {

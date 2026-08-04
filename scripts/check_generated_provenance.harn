@@ -4,13 +4,13 @@ import {
   verify_generated_provenance,
 } from "./lib/generated_provenance"
 
-pipeline default() {
+pipeline default(harness: Harness) {
   const output_path = "src/lib.harn"
   if !harness.fs.exists(output_path) {
     throw "generated SDK output is missing: ${output_path}"
   }
-  const expected = build_generated_provenance(harness, harness.fs.read_text(output_path))
-  const actual = read_generated_provenance(harness, output_path + ".provenance.toml")
+  const expected = build_generated_provenance(harness.fs, harness.fs.read_text(output_path))
+  const actual = read_generated_provenance(harness.fs, output_path + ".provenance.toml")
   verify_generated_provenance(actual, expected)
   harness.stdio.println("generated SDK provenance is current")
 }

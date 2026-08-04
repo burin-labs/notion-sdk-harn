@@ -26,61 +26,53 @@ const TOKEN = "secret_test_token"
 
 const NOTION_VERSION = "2022-06-28"
 
-const FIXTURE_DIR = source_dir() + "/../fixtures/recorded"
+/**
+ * Shapes for the outbound request bodies these tests inspect. `json_parse`
+ * returns an unvalidated value, so the assertions below need a declared shape
+ * before they may read properties off it.
+ */
+type QueryRequestBody = {filter: {property: string}, start_cursor?: string}
 
-const PAGE_OK_PATH = FIXTURE_DIR + "/page_retrieve_ok.json"
+type CommentRequestBody = {parent: {page_id: string}, rich_text: list<dict>, _variant?: string}
 
-const PAGE_404_PATH = FIXTURE_DIR + "/page_retrieve_404.json"
-
-const DS_QUERY_PAGE_1_PATH = FIXTURE_DIR + "/data_source_query_page_1.json"
-
-const DS_QUERY_PAGE_2_PATH = FIXTURE_DIR + "/data_source_query_page_2.json"
-
-const DS_QUERY_429_PATH = FIXTURE_DIR + "/data_source_query_429.json"
-
-const DS_TEMPLATES_PAGE_1_PATH = FIXTURE_DIR + "/data_source_templates_page_1.json"
-
-const DS_TEMPLATES_PAGE_2_PATH = FIXTURE_DIR + "/data_source_templates_page_2.json"
-
-const COMMENT_OK_PATH = FIXTURE_DIR + "/comment_create_ok.json"
-
-const USERS_PAGE_1_PATH = FIXTURE_DIR + "/users_list_page_1.json"
-
-const USERS_PAGE_2_PATH = FIXTURE_DIR + "/users_list_page_2.json"
-
-const OAUTH_INTROSPECT_OK_PATH = FIXTURE_DIR + "/oauth_introspect_ok.json"
+type OauthIntrospectBody = {token: string}
 
 fn fixture_client() {
   return new_client(BASE_URL, TOKEN, nil, "", "", nil, {"Notion-Version": NOTION_VERSION})
 }
 
-fn fixture_body(harness: Harness, path: string) -> string {
-  return harness.fs.read_text(path)
+/** Read a recorded fixture body by basename from an already-resolved directory. */
+fn fixture_body(harness: HarnessFs, dir: string, name: string) -> string {
+  return harness.read_text(dir + "/" + name)
 }
 
 @test
-pipeline default() {
-  egress_policy({allow: ["api.notion.test"], default: "deny"})
+pipeline default(harness: Harness) {
+  // Resolve the fixture directory once. `source_dir()` is call-frame scoped,
+  // and an abandoned lazy paginator below leaves the frame inside the SDK
+  // module, so a later per-read lookup would resolve against `src/`.
+  const fixtures = harness.fs.source_dir() + "/../fixtures/recorded"
+  harness.net.egress_policy({allow: ["api.notion.test"], default: "deny"})
   // ---------------------------------------------------------------
   // retrieve_a_page: happy path
   // ---------------------------------------------------------------
-  http_mock_clear()
+  harness.testing.http_mock_clear()
   const page_id = "11111111-1111-1111-1111-111111111111"
-  http_mock(
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + page_id,
     {
       status: 200,
-      body: fixture_body(harness, PAGE_OK_PATH),
+      body: fixture_body(harness.fs, fixtures, "page_retrieve_ok.json"),
       headers: {"x-request-id": "req-page-ok"},
     },
   )
   const client = fixture_client()
-  const page = retrieve_a_page(client, page_id)
+  const page = retrieve_a_page(harness, client, page_id)
   expect_eq(page.object, "page", "page object kind")
   expect_eq(page.id, page_id, "page id round trip")
   expect_eq(page.properties.Status.select.name, "Done", "deeply nested property decoded")
-  const calls = http_mock_calls({include_sensitive: true})
+  const calls = harness.testing.http_mock_calls({include_sensitive: true})
   expect_eq(len(calls), 1, "one page retrieve call")
   expect_eq(calls[0].method, "GET", "GET method")
   expect_eq(calls[0].headers.authorization, "Bearer " + TOKEN, "bearer token applied")
@@ -88,8 +80,8 @@ pipeline default() {
   // ---------------------------------------------------------------
   // users.list: safe GET calls use shared connector retry policy
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/users*",
     {
@@ -97,26 +89,26 @@ pipeline default() {
         {status: 503, body: "{\"code\":\"service_unavailable\",\"message\":\"busy\"}", headers: {}},
         {
           status: 200,
-          body: fixture_body(harness, USERS_PAGE_1_PATH),
+          body: fixture_body(harness.fs, fixtures, "users_list_page_1.json"),
           headers: {"x-request-id": "req-users-retry"},
         },
       ],
     },
   )
-  const retried_users = get_users(client, nil, 2)
+  const retried_users = get_users(harness, client, nil, 2)
   expect_eq(len(retried_users.results), 2, "safe GET retry returns list payload")
-  const retried_user_calls = http_mock_calls()
+  const retried_user_calls = harness.testing.http_mock_calls()
   expect_eq(len(retried_user_calls), 2, "safe GET retried once before success")
   // ---------------------------------------------------------------
   // client plumbing: provider tokens, base URL joins, version override
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + page_id,
     {
       status: 200,
-      body: fixture_body(harness, PAGE_OK_PATH),
+      body: fixture_body(harness.fs, fixtures, "page_retrieve_ok.json"),
       headers: {"x-request-id": "req-page-provider"},
     },
   )
@@ -129,9 +121,9 @@ pipeline default() {
     nil,
     {"Notion-Version": NOTION_VERSION},
   )
-  const provider_page = retrieve_a_page(provider_client, page_id, nil, "2026-03-11")
+  const provider_page = retrieve_a_page(harness, provider_client, page_id, nil, "2026-03-11")
   expect_eq(provider_page.id, page_id, "provider-token client retrieves page")
-  const provider_calls = http_mock_calls({include_sensitive: true})
+  const provider_calls = harness.testing.http_mock_calls({include_sensitive: true})
   expect_eq(len(provider_calls), 1, "provider-token client made one request")
   expect_eq(
     provider_calls[0].url,
@@ -151,15 +143,19 @@ pipeline default() {
   // ---------------------------------------------------------------
   // retrieve_a_page: 404 becomes a structured NotionError via decode_thrown
   // ---------------------------------------------------------------
-  http_mock_clear()
+  harness.testing.http_mock_clear()
   const missing_id = "99999999-9999-9999-9999-999999999999"
-  http_mock(
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + missing_id,
-    {status: 404, body: fixture_body(harness, PAGE_404_PATH), headers: {"x-request-id": "req-404"}},
+    {
+      status: 404,
+      body: fixture_body(harness.fs, fixtures, "page_retrieve_404.json"),
+      headers: {"x-request-id": "req-404"},
+    },
   )
   const missing = try {
-    retrieve_a_page(client, missing_id)
+    retrieve_a_page(harness, client, missing_id)
   }
   expect(is_err(missing), "404 returns Err")
   const err_404 = decode_thrown(unwrap_err(missing))
@@ -171,14 +167,14 @@ pipeline default() {
   // ---------------------------------------------------------------
   // retrieve_a_page: invalid JSON uses the shared parse-error envelope
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/pages/" + page_id,
     {status: 200, body: "not json", headers: {"x-request-id": "req-invalid-json"}},
   )
   const invalid_json = try {
-    retrieve_a_page(client, page_id)
+    retrieve_a_page(harness, client, page_id)
   }
   expect(is_err(invalid_json), "invalid JSON returns Err")
   const invalid_json_raw = unwrap_err(invalid_json)
@@ -191,21 +187,21 @@ pipeline default() {
   // ---------------------------------------------------------------
   // data_sources.query: paginated walk via paginate(...)
   // ---------------------------------------------------------------
-  http_mock_clear()
+  harness.testing.http_mock_clear()
   const ds_id = "33333333-3333-3333-3333-333333333333"
-  http_mock(
+  harness.testing.http_mock(
     "POST",
     BASE_URL + "/v1/data_sources/" + ds_id + "/query",
     {
       responses: [
         {
           status: 200,
-          body: fixture_body(harness, DS_QUERY_PAGE_1_PATH),
+          body: fixture_body(harness.fs, fixtures, "data_source_query_page_1.json"),
           headers: {"x-request-id": "req-ds-1"},
         },
         {
           status: 200,
-          body: fixture_body(harness, DS_QUERY_PAGE_2_PATH),
+          body: fixture_body(harness.fs, fixtures, "data_source_query_page_2.json"),
           headers: {"x-request-id": "req-ds-2"},
         },
       ],
@@ -213,6 +209,7 @@ pipeline default() {
   )
   const rows = collect_all(
     fn(args) { return post_database_query(
+      harness,
       client,
       ds_id,
       {filter: {property: "Status", select: {equals: "Done"}}, ...args},
@@ -221,29 +218,29 @@ pipeline default() {
   expect_eq(len(rows), 3, "paginate concatenates results across pages")
   expect_eq(rows[0].id, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", "first row id")
   expect_eq(rows[2].id, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3", "last row id")
-  const query_calls = http_mock_calls()
+  const query_calls = harness.testing.http_mock_calls()
   expect_eq(len(query_calls), 2, "two POSTs for two-page result")
-  const first_body = json_parse(query_calls[0].body)
+  const first_body: QueryRequestBody = json_parse(query_calls[0].body)
   expect_eq(first_body.filter.property, "Status", "filter forwarded on page 1")
-  expect_eq(first_body.get("start_cursor"), nil, "no cursor on first page")
-  const second_body = json_parse(query_calls[1].body)
+  expect_eq(first_body.start_cursor, nil, "no cursor on first page")
+  const second_body: QueryRequestBody = json_parse(query_calls[1].body)
   expect_eq(second_body.start_cursor, "page-2-cursor", "second page picks up cursor")
   expect_eq(second_body.filter.property, "Status", "filter preserved across pages")
   // ---------------------------------------------------------------
   // data_sources.query: 429 becomes a structured rate_limited error
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "POST",
     BASE_URL + "/v1/data_sources/" + ds_id + "/query",
     {
       status: 429,
-      body: fixture_body(harness, DS_QUERY_429_PATH),
+      body: fixture_body(harness.fs, fixtures, "data_source_query_429.json"),
       headers: {"x-request-id": "req-429", "retry-after": "5"},
     },
   )
   const throttled = try {
-    post_database_query(client, ds_id, {})
+    post_database_query(harness, client, ds_id, {})
   }
   expect(is_err(throttled), "429 returns Err")
   const throttled_raw = unwrap_err(throttled)
@@ -274,8 +271,8 @@ pipeline default() {
   // ---------------------------------------------------------------
   // comments.create: unsafe write calls do not retry without idempotency
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "POST",
     BASE_URL + "/v1/comments",
     {
@@ -283,7 +280,7 @@ pipeline default() {
         {status: 503, body: "{\"code\":\"service_unavailable\",\"message\":\"busy\"}", headers: {}},
         {
           status: 200,
-          body: fixture_body(harness, COMMENT_OK_PATH),
+          body: fixture_body(harness.fs, fixtures, "comment_create_ok.json"),
           headers: {"x-request-id": "req-comment-retry"},
         },
       ],
@@ -294,7 +291,7 @@ pipeline default() {
     [{type: "text", text: {content: "No retry without idempotency"}}],
   )
   const no_retry = try {
-    create_a_comment(client, no_retry_body)
+    create_a_comment(harness, client, no_retry_body)
   }
   expect(is_err(no_retry), "write without idempotency key returns the first failure")
   const no_retry_raw = unwrap_err(no_retry)
@@ -304,18 +301,18 @@ pipeline default() {
     "overloaded",
     "write without idempotency keeps connector category",
   )
-  const no_retry_calls = http_mock_calls()
+  const no_retry_calls = harness.testing.http_mock_calls()
   expect_eq(len(no_retry_calls), 1, "write without idempotency is not retried")
   // ---------------------------------------------------------------
   // comments.create: variant1 (parent + rich_text)
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "POST",
     BASE_URL + "/v1/comments",
     {
       status: 200,
-      body: fixture_body(harness, COMMENT_OK_PATH),
+      body: fixture_body(harness.fs, fixtures, "comment_create_ok.json"),
       headers: {"x-request-id": "req-comment"},
     },
   )
@@ -323,25 +320,25 @@ pipeline default() {
     {type: "page_id", page_id: page_id},
     [{type: "text", text: {content: "Hello from notion-sdk-harn"}}],
   )
-  const comment = create_a_comment(client, body)
+  const comment = create_a_comment(harness, client, body)
   expect_eq(comment.object, "comment", "comment object kind")
   expect_eq(comment.id, "cccccccc-cccc-cccc-cccc-cccccccccccc", "comment id round trip")
-  const comment_calls = http_mock_calls()
+  const comment_calls = harness.testing.http_mock_calls()
   expect_eq(len(comment_calls), 1, "one comments.create call")
-  const comment_body = json_parse(comment_calls[0].body)
+  const comment_body: CommentRequestBody = json_parse(comment_calls[0].body)
   expect_eq(comment_body.parent.page_id, page_id, "comment parent forwarded")
   expect_eq(len(comment_body.rich_text), 1, "rich_text array forwarded")
-  expect_eq(comment_body.get("_variant"), nil, "internal _variant marker stripped before send")
+  expect_eq(comment_body._variant, nil, "internal _variant marker stripped before send")
   // ---------------------------------------------------------------
   // oauth.introspect: Basic auth provider, not Bearer auth
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "POST",
     BASE_URL + "/v1/oauth/introspect",
     {
       status: 200,
-      body: fixture_body(harness, OAUTH_INTROSPECT_OK_PATH),
+      body: fixture_body(harness.fs, fixtures, "oauth_introspect_ok.json"),
       headers: {"x-request-id": "req-oauth-introspect"},
     },
   )
@@ -354,9 +351,9 @@ pipeline default() {
     fn() { return {user: "client-id", password: "client-secret"} },
     {"Notion-Version": NOTION_VERSION},
   )
-  const token_state = introspect_token(oauth_client, {token: "access-token"}, "2026-03-11")
+  const token_state = introspect_token(harness, oauth_client, {token: "access-token"}, "2026-03-11")
   expect_eq(token_state.active, true, "introspection response decoded")
-  const oauth_calls = http_mock_calls({include_sensitive: true})
+  const oauth_calls = harness.testing.http_mock_calls({include_sensitive: true})
   expect_eq(len(oauth_calls), 1, "one oauth introspection call")
   expect_eq(
     oauth_calls[0].headers.authorization,
@@ -368,35 +365,37 @@ pipeline default() {
     "2026-03-11",
     "oauth version override applied",
   )
-  const oauth_body = json_parse(oauth_calls[0].body)
+  const oauth_body: OauthIntrospectBody = json_parse(oauth_calls[0].body)
   expect_eq(oauth_body.token, "access-token", "oauth body forwarded")
   // ---------------------------------------------------------------
   // users.list: paginate via paginate(...) with explicit page_size
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/users*",
     {
       responses: [
         {
           status: 200,
-          body: fixture_body(harness, USERS_PAGE_1_PATH),
+          body: fixture_body(harness.fs, fixtures, "users_list_page_1.json"),
           headers: {"x-request-id": "req-users-1"},
         },
         {
           status: 200,
-          body: fixture_body(harness, USERS_PAGE_2_PATH),
+          body: fixture_body(harness.fs, fixtures, "users_list_page_2.json"),
           headers: {"x-request-id": "req-users-2"},
         },
       ],
     },
   )
-  const users = collect_all(fn(args) { return get_users(client, args.get("start_cursor"), 50) })
+  const users = collect_all(
+    fn(args) { return get_users(harness, client, args.get("start_cursor"), 50) },
+  )
   expect_eq(len(users), 3, "users.list paginates across two pages")
   expect_eq(users[0].name, "Ada Lovelace", "first user")
   expect_eq(users[2].type, "bot", "bot user on second page")
-  const user_calls = http_mock_calls()
+  const user_calls = harness.testing.http_mock_calls()
   expect_eq(len(user_calls), 2, "two GETs for two-page result")
   expect_contains(user_calls[0].url, "page_size=50", "page_size forwarded as query param")
   expect(user_calls[0].url.index_of("start_cursor=") < 0, "no start_cursor on first page")
@@ -404,44 +403,59 @@ pipeline default() {
   // ---------------------------------------------------------------
   // paginate (lazy): early stream termination after one item
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/users*",
-    {status: 200, body: fixture_body(harness, USERS_PAGE_1_PATH), headers: {}},
+    {status: 200, body: fixture_body(harness.fs, fixtures, "users_list_page_1.json"), headers: {}},
   )
   let first_only = nil
-  for u in paginate(fn(args) { return get_users(client, args.get("start_cursor"), nil) }) {
+  for u in paginate(fn(args) { return get_users(harness, client, args.get("start_cursor"), nil) }) {
     first_only = u
     break
   }
   expect(first_only != nil, "stream yields at least one item")
   expect_eq(first_only.id, "22222222-2222-2222-2222-222222222222", "first streamed user")
-  const lazy_calls = http_mock_calls()
+  const lazy_calls = harness.testing.http_mock_calls()
   expect_eq(len(lazy_calls), 1, "lazy paginate stops after first page when consumer breaks")
   // ---------------------------------------------------------------
   // data_sources.templates — non-`results` list pagination
   // ---------------------------------------------------------------
-  http_mock_clear()
-  http_mock(
+  harness.testing.http_mock_clear()
+  harness.testing.http_mock(
     "GET",
     BASE_URL + "/v1/data_sources/" + ds_id + "/templates*",
     {
       responses: [
-        {status: 200, body: fixture_body(harness, DS_TEMPLATES_PAGE_1_PATH), headers: {}},
-        {status: 200, body: fixture_body(harness, DS_TEMPLATES_PAGE_2_PATH), headers: {}},
+        {
+          status: 200,
+          body: fixture_body(harness.fs, fixtures, "data_source_templates_page_1.json"),
+          headers: {},
+        },
+        {
+          status: 200,
+          body: fixture_body(harness.fs, fixtures, "data_source_templates_page_2.json"),
+          headers: {},
+        },
       ],
     },
   )
   const templates = collect_all(
-    fn(args) { return list_data_source_templates(client, ds_id, nil, args.get("start_cursor"), 50) },
+    fn(args) { return list_data_source_templates(
+      harness,
+      client,
+      ds_id,
+      nil,
+      args.get("start_cursor"),
+      50,
+    ) },
     {},
     "templates",
   )
   expect_eq(len(templates), 3, "templates paginate across two pages")
   expect_eq(templates[0].name, "Research note", "first template decoded")
   expect_eq(templates[2].id, "template-3", "last template decoded")
-  const template_calls = http_mock_calls()
+  const template_calls = harness.testing.http_mock_calls()
   expect_eq(len(template_calls), 2, "two GETs for template pagination")
   expect_contains(template_calls[0].url, "page_size=50", "template page_size forwarded")
   expect(template_calls[0].url.index_of("start_cursor=") < 0, "no template cursor on first page")
@@ -480,6 +494,6 @@ pipeline default() {
     3,
     "template plan extracts templates",
   )
-  http_mock_clear()
+  harness.testing.http_mock_clear()
   harness.stdio.println("notion_sdk_smoke: ok")
 }

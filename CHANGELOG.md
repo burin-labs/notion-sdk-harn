@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking.** Every generated operation now takes the root `Harness` as its
+  first parameter instead of a narrowed `{clock, net}` record. This comes from
+  regenerating against `harn-openapi`'s Harn 0.10.x cutover, which threads
+  explicit capabilities through codegen. Callers pass `harness` directly; a
+  root `Harness` does not structurally satisfy the old narrowed record, so this
+  is a source-breaking change for consumers.
+- Repinned `harn-openapi` to `2ade277`, the first revision whose codegen runs
+  on Harn 0.10.x. The prior pin called the ambient `render_string` builtin,
+  which 0.10 no longer exposes, so `scripts/regen.harn` could not run at all.
+- `scripts/regen.harn` now runs `harn lint --fix` over the generated source
+  before formatting it. The package contract runs `harn lint` in strict mode
+  where a warning is fatal, and a manual pass would be reverted by the next
+  regeneration, so the repairs belong to generation.
+- Resolved the recorded smoke test's fixture directory once per run.
+  `source_dir()` is call-frame scoped, and an abandoned lazy paginator leaves
+  the frame inside the SDK module, so a per-read lookup resolved against
+  `src/`.
+
 ## [0.1.1] - 2026-07-11
 
 ### Changed
