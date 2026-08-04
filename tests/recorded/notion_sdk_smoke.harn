@@ -48,9 +48,10 @@ fn fixture_body(harness: HarnessFs, dir: string, name: string) -> string {
 
 @test
 pipeline default(harness: Harness) {
-  // Resolve the fixture directory once. `source_dir()` is call-frame scoped,
-  // and an abandoned lazy paginator below leaves the frame inside the SDK
-  // module, so a later per-read lookup would resolve against `src/`.
+  // Resolve the fixture directory once. Iterating any generator from another
+  // module leaves the thread-local source dir pointing at that module, so a
+  // per-read lookup after the paginated section below resolves against `src/`
+  // instead of this file's directory. See burin-labs/harn#6160.
   const fixtures = harness.fs.source_dir() + "/../fixtures/recorded"
   harness.net.egress_policy({allow: ["api.notion.test"], default: "deny"})
   // ---------------------------------------------------------------
