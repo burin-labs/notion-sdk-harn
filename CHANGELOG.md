@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-03
+
 ### Changed
 
 - **Breaking.** Every generated operation now takes the root `Harness` as its
@@ -22,10 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before formatting it. The package contract runs `harn lint` in strict mode
   where a warning is fatal, and a manual pass would be reverted by the next
   regeneration, so the repairs belong to generation.
-- Resolved the recorded smoke test's fixture directory once per run.
-  `source_dir()` is call-frame scoped, and an abandoned lazy paginator leaves
-  the frame inside the SDK module, so a per-read lookup resolved against
-  `src/`.
+- Resolved the recorded smoke test's fixture directory once per run. Iterating
+  any generator from another module leaves the thread-local source dir pointing
+  at that module, so a per-read `source_dir()` lookup after the paginated
+  section resolved against `src/` instead of the test's own directory. Filed
+  upstream as [burin-labs/harn#6160](https://github.com/burin-labs/harn/issues/6160).
 
 ## [0.1.1] - 2026-07-11
 
@@ -72,12 +75,13 @@ a reproducible version instead of tracking `branch = "main"`.
 
 ### Notes
 
-- `harn-openapi` is pinned at `v0.1.1-rc.1` for reproducible codegen
+- `harn-openapi` is pinned by revision in `harn.toml` for reproducible codegen
   refreshes; bumping it requires a CHANGELOG entry here.
 - This SDK covers outbound Notion API calls only. Inbound webhook
   handling lives in
   [`harn-notion-connector`](https://github.com/burin-labs/harn-notion-connector).
 
-[Unreleased]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/burin-labs/notion-sdk-harn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/burin-labs/notion-sdk-harn/releases/tag/v0.1.0
