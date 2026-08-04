@@ -36,8 +36,8 @@ const CODEGEN_OPTIONS = {
   header_overrides: {"Notion-Version": "2022-06-28"},
 }
 
-fn _harn_bin(harness: HarnessEnv) -> string {
-  const bin = harness.get("HARN_BIN")
+fn _harn_bin(env: HarnessEnv) -> string {
+  const bin = env.get("HARN_BIN")
   if bin != nil && bin != "" {
     return bin
   }
