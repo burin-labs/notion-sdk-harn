@@ -7,7 +7,7 @@ import { decode_thrown, redact_response } from "../src/helpers"
 import { expect, expect_contains, expect_eq } from "./assertions"
 
 @test
-pipeline test_redacts_authorization_header() {
+pipeline test_redacts_authorization_header(harness: Harness) {
   const resp = {
     status: 401,
     ok: false,
@@ -29,7 +29,7 @@ pipeline test_redacts_authorization_header() {
 }
 
 @test
-pipeline test_redacts_other_sensitive_headers() {
+pipeline test_redacts_other_sensitive_headers(harness: Harness) {
   const resp = {
     status: 401,
     ok: false,
@@ -52,7 +52,7 @@ pipeline test_redacts_other_sensitive_headers() {
 }
 
 @test
-pipeline test_truncates_oversize_body() {
+pipeline test_truncates_oversize_body(harness: Harness) {
   let big = ""
   let i = 0
   while i < 2048 {
@@ -67,14 +67,14 @@ pipeline test_truncates_oversize_body() {
 }
 
 @test
-pipeline test_pass_through_non_dict() {
+pipeline test_pass_through_non_dict(harness: Harness) {
   const safe = redact_response("string envelope")
   expect_eq(safe, "string envelope", "string envelopes pass through unchanged")
   harness.stdio.println("redact non-dict: ok")
 }
 
 @test
-pipeline test_decode_thrown_still_works_after_redaction() {
+pipeline test_decode_thrown_still_works_after_redaction(harness: Harness) {
   // Sanity check that downstream decode_thrown still extracts the structured
   // NotionError from a redacted envelope (the field shape is preserved).
   const resp = {

@@ -1,6 +1,6 @@
 [package]
 name = "notion-sdk-harn"
-version = "0.1.1"
+version = "0.2.0"
 description = "Typed Notion REST API SDK in pure Harn, generated via harn-openapi."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/burin-labs/notion-sdk-harn"
@@ -15,4 +15,4 @@ helpers = "src/helpers.harn"
 # clean consumer project without a sibling checkout. Pin exact revisions for
 # reproducible codegen refreshes and package installs.
 [dependencies]
-harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "f1c8eab3efc5f01dce0670ee4c4e39fcf6d852c1" }
+harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "2ade2772764a90e38498dc7ec93b5c8870850006" }

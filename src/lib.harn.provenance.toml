@@ -1,5 +1,5 @@
 schema_version = 1
 fixture_sha256 = "1acaa25d1e0ceab03e38f1f71deb8b2d63fd83a7d974ce32ed27e1342714af20"
-generator_commit = "f1c8eab3efc5f01dce0670ee4c4e39fcf6d852c1"
-regen_sha256 = "e5eb8c32cb9b71bd22761212b6f9cefdb206016b0ff72afe12ce1285822ce6da"
-output_sha256 = "ea3b3c6b6786018f4ba3f9f855913e7b858da3ce85eccfbc34698cd09d96b0cf"
+generator_commit = "2ade2772764a90e38498dc7ec93b5c8870850006"
+regen_sha256 = "84a5f469aff71886b35b97ff77a089dd501712e50f6791cf0b688203547debd0"
+output_sha256 = "40bc09e7352a9b4b99a594f55b432c138a6bd3546b92f26ffa7d7520b976e8e1"
