@@ -17,7 +17,16 @@ jobs:
     uses: burin-labs/harn/.github/workflows/bump-harn.yml@d23dc77198ea45210eb3fb205031c349533d920f
     with:
       version: ${{ inputs.version }}
-      validate-command: harn package verify .
+      # Capability migrations can rewrite this repository's generated SDK. Regenerate
+      # the SDK and its provenance receipt together so the signed bump commit cannot
+      # carry generated output whose recorded identity is stale.
+      refresh-command: |-
+        harn install --locked || harn install
+        harn run scripts/regen.harn -- --apply
+      validate-command: |-
+        harn package verify .
+        harn run scripts/check_generated_provenance.harn
+        harn run tests/recorded/notion_sdk_smoke.harn
     secrets:
       app-client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
       app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
