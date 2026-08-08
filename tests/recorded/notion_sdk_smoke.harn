@@ -69,7 +69,7 @@ pipeline default(harness: Harness) {
     },
   )
   const client = fixture_client()
-  const page = retrieve_a_page(harness, client, page_id)
+  const page = retrieve_a_page({clock: harness.clock, net: harness.net}, client, page_id)
   expect_eq(page.object, "page", "page object kind")
   expect_eq(page.id, page_id, "page id round trip")
   expect_eq(page.properties.Status.select.name, "Done", "deeply nested property decoded")
@@ -96,7 +96,7 @@ pipeline default(harness: Harness) {
       ],
     },
   )
-  const retried_users = get_users(harness, client, nil, 2)
+  const retried_users = get_users({clock: harness.clock, net: harness.net}, client, nil, 2)
   expect_eq(len(retried_users.results), 2, "safe GET retry returns list payload")
   const retried_user_calls = harness.testing.http_mock_calls()
   expect_eq(len(retried_user_calls), 2, "safe GET retried once before success")
@@ -122,7 +122,13 @@ pipeline default(harness: Harness) {
     nil,
     {"Notion-Version": NOTION_VERSION},
   )
-  const provider_page = retrieve_a_page(harness, provider_client, page_id, nil, "2026-03-11")
+  const provider_page = retrieve_a_page(
+    {clock: harness.clock, net: harness.net},
+    provider_client,
+    page_id,
+    nil,
+    "2026-03-11",
+  )
   expect_eq(provider_page.id, page_id, "provider-token client retrieves page")
   const provider_calls = harness.testing.http_mock_calls({include_sensitive: true})
   expect_eq(len(provider_calls), 1, "provider-token client made one request")
@@ -156,7 +162,7 @@ pipeline default(harness: Harness) {
     },
   )
   const missing = try {
-    retrieve_a_page(harness, client, missing_id)
+    retrieve_a_page({clock: harness.clock, net: harness.net}, client, missing_id)
   }
   expect(is_err(missing), "404 returns Err")
   const err_404 = decode_thrown(unwrap_err(missing))
@@ -175,7 +181,7 @@ pipeline default(harness: Harness) {
     {status: 200, body: "not json", headers: {"x-request-id": "req-invalid-json"}},
   )
   const invalid_json = try {
-    retrieve_a_page(harness, client, page_id)
+    retrieve_a_page({clock: harness.clock, net: harness.net}, client, page_id)
   }
   expect(is_err(invalid_json), "invalid JSON returns Err")
   const invalid_json_raw = unwrap_err(invalid_json)
@@ -210,7 +216,7 @@ pipeline default(harness: Harness) {
   )
   const rows = collect_all(
     fn(args) { return post_database_query(
-      harness,
+      {clock: harness.clock, net: harness.net},
       client,
       ds_id,
       {filter: {property: "Status", select: {equals: "Done"}}, ...args},
@@ -241,7 +247,7 @@ pipeline default(harness: Harness) {
     },
   )
   const throttled = try {
-    post_database_query(harness, client, ds_id, {})
+    post_database_query({clock: harness.clock, net: harness.net}, client, ds_id, {})
   }
   expect(is_err(throttled), "429 returns Err")
   const throttled_raw = unwrap_err(throttled)
@@ -292,7 +298,7 @@ pipeline default(harness: Harness) {
     [{type: "text", text: {content: "No retry without idempotency"}}],
   )
   const no_retry = try {
-    create_a_comment(harness, client, no_retry_body)
+    create_a_comment({clock: harness.clock, net: harness.net}, client, no_retry_body)
   }
   expect(is_err(no_retry), "write without idempotency key returns the first failure")
   const no_retry_raw = unwrap_err(no_retry)
@@ -321,7 +327,7 @@ pipeline default(harness: Harness) {
     {type: "page_id", page_id: page_id},
     [{type: "text", text: {content: "Hello from notion-sdk-harn"}}],
   )
-  const comment = create_a_comment(harness, client, body)
+  const comment = create_a_comment({clock: harness.clock, net: harness.net}, client, body)
   expect_eq(comment.object, "comment", "comment object kind")
   expect_eq(comment.id, "cccccccc-cccc-cccc-cccc-cccccccccccc", "comment id round trip")
   const comment_calls = harness.testing.http_mock_calls()
@@ -352,7 +358,12 @@ pipeline default(harness: Harness) {
     fn() { return {user: "client-id", password: "client-secret"} },
     {"Notion-Version": NOTION_VERSION},
   )
-  const token_state = introspect_token(harness, oauth_client, {token: "access-token"}, "2026-03-11")
+  const token_state = introspect_token(
+    {clock: harness.clock, net: harness.net},
+    oauth_client,
+    {token: "access-token"},
+    "2026-03-11",
+  )
   expect_eq(token_state.active, true, "introspection response decoded")
   const oauth_calls = harness.testing.http_mock_calls({include_sensitive: true})
   expect_eq(len(oauth_calls), 1, "one oauth introspection call")
@@ -391,7 +402,12 @@ pipeline default(harness: Harness) {
     },
   )
   const users = collect_all(
-    fn(args) { return get_users(harness, client, args.get("start_cursor"), 50) },
+    fn(args) { return get_users(
+      {clock: harness.clock, net: harness.net},
+      client,
+      args.get("start_cursor"),
+      50,
+    ) },
   )
   expect_eq(len(users), 3, "users.list paginates across two pages")
   expect_eq(users[0].name, "Ada Lovelace", "first user")
@@ -411,7 +427,14 @@ pipeline default(harness: Harness) {
     {status: 200, body: fixture_body(harness.fs, fixtures, "users_list_page_1.json"), headers: {}},
   )
   let first_only = nil
-  for u in paginate(fn(args) { return get_users(harness, client, args.get("start_cursor"), nil) }) {
+  for u in paginate(
+    fn(args) { return get_users(
+      {clock: harness.clock, net: harness.net},
+      client,
+      args.get("start_cursor"),
+      nil,
+    ) },
+  ) {
     first_only = u
     break
   }
@@ -443,7 +466,7 @@ pipeline default(harness: Harness) {
   )
   const templates = collect_all(
     fn(args) { return list_data_source_templates(
-      harness,
+      {clock: harness.clock, net: harness.net},
       client,
       ds_id,
       nil,

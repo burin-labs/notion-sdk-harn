@@ -461,7 +461,12 @@ fn _strip_codegen_variant(body) -> dict {
 }
 
 /** Retrieve a block */
-pub fn retrieve_a_block(harness: Harness, client: dict, block_id, notion_version = nil) -> any {
+pub fn retrieve_a_block(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  block_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {block_id: block_id}
   const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -488,7 +493,12 @@ pub fn retrieve_a_block(harness: Harness, client: dict, block_id, notion_version
 }
 
 /** Delete a block */
-pub fn delete_a_block(harness: Harness, client: dict, block_id, notion_version = nil) -> any {
+pub fn delete_a_block(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  block_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {block_id: block_id}
   const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -515,7 +525,13 @@ pub fn delete_a_block(harness: Harness, client: dict, block_id, notion_version =
 }
 
 /** Update a block */
-pub fn update_a_block(harness: Harness, client: dict, block_id, body, notion_version = nil) -> any {
+pub fn update_a_block(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  block_id,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {block_id: block_id}
   const path = _interpolate("/v1/blocks/{block_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -570,7 +586,7 @@ pub fn update_a_block_variant2(in_trash = nil) -> dict {
 
 /** Retrieve block children */
 pub fn get_block_children(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   block_id,
   start_cursor = nil,
@@ -610,7 +626,7 @@ pub fn get_block_children(
 
 /** Append block children */
 pub fn patch_block_children(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   block_id,
   body,
@@ -649,7 +665,7 @@ pub fn patch_block_children(
 
 /** List comments */
 pub fn list_comments(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   block_id,
   start_cursor = nil,
@@ -688,7 +704,12 @@ pub fn list_comments(
 }
 
 /** Create a comment */
-pub fn create_a_comment(harness: Harness, client: dict, body, notion_version = nil) -> any {
+pub fn create_a_comment(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {}
   const path = _interpolate("/v1/comments", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -748,7 +769,12 @@ pub fn create_a_comment_variant4(discussion_id: string, markdown: string) -> dic
 }
 
 /** Retrieve a comment */
-pub fn retrieve_comment(harness: Harness, client: dict, comment_id, notion_version = nil) -> any {
+pub fn retrieve_comment(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  comment_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {comment_id: comment_id}
   const path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -775,7 +801,12 @@ pub fn retrieve_comment(harness: Harness, client: dict, comment_id, notion_versi
 }
 
 /** Delete a comment */
-pub fn delete_a_comment(harness: Harness, client: dict, comment_id, notion_version = nil) -> any {
+pub fn delete_a_comment(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  comment_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {comment_id: comment_id}
   const path = _interpolate("/v1/comments/{comment_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -803,7 +834,7 @@ pub fn delete_a_comment(harness: Harness, client: dict, comment_id, notion_versi
 
 /** Update a comment */
 pub fn update_a_comment(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   comment_id,
   body,
@@ -859,7 +890,7 @@ pub fn update_a_comment_variant2(markdown: string) -> dict {
 
 /** List custom emojis */
 pub fn list_custom_emojis(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   start_cursor = nil,
   page_size = nil,
@@ -898,7 +929,12 @@ pub fn list_custom_emojis(
 }
 
 /** Create a data source */
-pub fn create_a_database(harness: Harness, client: dict, body, notion_version = nil) -> any {
+pub fn create_a_database(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {}
   const path = _interpolate("/v1/data_sources", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -928,7 +964,7 @@ pub fn create_a_database(harness: Harness, client: dict, body, notion_version = 
 
 /** Retrieve a data source */
 pub fn retrieve_a_data_source(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   data_source_id,
   notion_version = nil,
@@ -960,7 +996,7 @@ pub fn retrieve_a_data_source(
 
 /** Update a data source */
 pub fn update_a_data_source(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   data_source_id,
   body,
@@ -995,7 +1031,7 @@ pub fn update_a_data_source(
 
 /** Query a data source */
 pub fn post_database_query(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   data_source_id,
   body,
@@ -1037,7 +1073,7 @@ pub fn post_database_query(
 
 /** List templates in a data source */
 pub fn list_data_source_templates(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   data_source_id,
   name = nil,
@@ -1077,7 +1113,12 @@ pub fn list_data_source_templates(
 }
 
 /** Create a database */
-pub fn create_database(harness: Harness, client: dict, body, notion_version = nil) -> any {
+pub fn create_database(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {}
   const path = _interpolate("/v1/databases", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1106,7 +1147,12 @@ pub fn create_database(harness: Harness, client: dict, body, notion_version = ni
 }
 
 /** Retrieve a database */
-pub fn retrieve_database(harness: Harness, client: dict, database_id, notion_version = nil) -> any {
+pub fn retrieve_database(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  database_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {database_id: database_id}
   const path = _interpolate("/v1/databases/{database_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1134,7 +1180,7 @@ pub fn retrieve_database(harness: Harness, client: dict, database_id, notion_ver
 
 /** Update a database */
 pub fn update_database(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   database_id,
   body,
@@ -1169,7 +1215,7 @@ pub fn update_database(
 
 /** List file uploads */
 pub fn list_file_uploads(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   status = nil,
   start_cursor = nil,
@@ -1209,7 +1255,7 @@ pub fn list_file_uploads(
 
 /** Create a file upload */
 pub fn create_file(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   body,
   notion_version = nil,
@@ -1247,7 +1293,7 @@ pub fn create_file(
 
 /** Retrieve a file upload */
 pub fn retrieve_file_upload(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   file_upload_id,
   notion_version = nil,
@@ -1283,7 +1329,7 @@ pub fn retrieve_file_upload(
 
 /** Complete a multi-part file upload */
 pub fn complete_file_upload(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   file_upload_id,
   notion_version = nil,
@@ -1319,7 +1365,7 @@ pub fn complete_file_upload(
 
 /** Upload a file */
 pub fn upload_file(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   file_upload_id,
   body,
@@ -1358,7 +1404,7 @@ pub fn upload_file(
 
 /** Introspect a token */
 pub fn introspect_token(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   body,
   notion_version = nil,
@@ -1396,7 +1442,7 @@ pub fn introspect_token(
 
 /** Revoke a token */
 pub fn revoke_token(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   body,
   notion_version = nil,
@@ -1434,7 +1480,7 @@ pub fn revoke_token(
 
 /** Exchange an authorization code for an access and refresh token */
 pub fn create_a_token(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   body,
   notion_version = nil,
@@ -1499,7 +1545,12 @@ pub fn create_a_token_variant2(refresh_token: string) -> dict {
 }
 
 /** Create a page */
-pub fn post_page(harness: Harness, client: dict, body, notion_version = nil) -> any {
+pub fn post_page(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {}
   const path = _interpolate("/v1/pages", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1529,7 +1580,7 @@ pub fn post_page(harness: Harness, client: dict, body, notion_version = nil) -> 
 
 /** Retrieve a page */
 pub fn retrieve_a_page(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   page_id,
   filter_properties = nil,
@@ -1563,7 +1614,13 @@ pub fn retrieve_a_page(
 }
 
 /** Update page */
-pub fn patch_page(harness: Harness, client: dict, page_id, body, notion_version = nil) -> any {
+pub fn patch_page(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  page_id,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {page_id: page_id}
   const path = _interpolate("/v1/pages/{page_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1593,7 +1650,7 @@ pub fn patch_page(harness: Harness, client: dict, page_id, body, notion_version 
 
 /** Retrieve a page as markdown */
 pub fn retrieve_page_markdown(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   page_id,
   include_transcript = nil,
@@ -1632,7 +1689,7 @@ pub fn retrieve_page_markdown(
 
 /** Update a page's content as markdown */
 pub fn update_page_markdown(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   page_id,
   body,
@@ -1707,7 +1764,13 @@ pub fn update_page_markdown_replace_content(replace_content: dict) -> dict {
 }
 
 /** Move a page */
-pub fn move_page(harness: Harness, client: dict, page_id, body, notion_version = nil) -> any {
+pub fn move_page(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  page_id,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {page_id: page_id}
   const path = _interpolate("/v1/pages/{page_id}/move", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1737,7 +1800,7 @@ pub fn move_page(harness: Harness, client: dict, page_id, body, notion_version =
 
 /** Retrieve a page property item */
 pub fn retrieve_a_page_property(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   page_id,
   property_id,
@@ -1774,7 +1837,7 @@ pub fn retrieve_a_page_property(
 
 /** Search by title */
 pub fn post_search(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   body,
   notion_version = nil,
@@ -1812,7 +1875,7 @@ pub fn post_search(
 
 /** List all users */
 pub fn get_users(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   start_cursor = nil,
   page_size = nil,
@@ -1850,7 +1913,11 @@ pub fn get_users(
 }
 
 /** Retrieve your token's bot user */
-pub fn get_self(harness: Harness, client: dict, notion_version = nil) -> UserObjectResponse {
+pub fn get_self(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  notion_version = nil,
+) -> UserObjectResponse {
   const path_bindings = {}
   const path = _interpolate("/v1/users/me", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1877,7 +1944,7 @@ pub fn get_self(harness: Harness, client: dict, notion_version = nil) -> UserObj
 
 /** Retrieve a user */
 pub fn get_user(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   user_id,
   notion_version = nil,
@@ -1908,7 +1975,7 @@ pub fn get_user(
 
 /** List views */
 pub fn list_views(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   database_id = nil,
   data_source_id = nil,
@@ -1953,7 +2020,12 @@ pub fn list_views(
 }
 
 /** Create a view */
-pub fn create_view(harness: Harness, client: dict, body, notion_version = nil) -> any {
+pub fn create_view(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {}
   const path = _interpolate("/v1/views", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -1982,7 +2054,12 @@ pub fn create_view(harness: Harness, client: dict, body, notion_version = nil) -
 }
 
 /** Retrieve a view */
-pub fn retrieve_a_view(harness: Harness, client: dict, view_id, notion_version = nil) -> any {
+pub fn retrieve_a_view(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  view_id,
+  notion_version = nil,
+) -> any {
   const path_bindings = {view_id: view_id}
   const path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -2010,7 +2087,7 @@ pub fn retrieve_a_view(harness: Harness, client: dict, view_id, notion_version =
 
 /** Delete a view */
 pub fn delete_view(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   view_id,
   notion_version = nil,
@@ -2045,7 +2122,13 @@ pub fn delete_view(
 }
 
 /** Update a view */
-pub fn update_a_view(harness: Harness, client: dict, view_id, body, notion_version = nil) -> any {
+pub fn update_a_view(
+  harness: {clock: HarnessClock, net: HarnessNet},
+  client: dict,
+  view_id,
+  body,
+  notion_version = nil,
+) -> any {
   const path_bindings = {view_id: view_id}
   const path = _interpolate("/v1/views/{view_id}", path_bindings)
   let url = _join_url(client.base_url, path)
@@ -2075,7 +2158,7 @@ pub fn update_a_view(harness: Harness, client: dict, view_id, body, notion_versi
 
 /** Create a view query */
 pub fn create_view_query(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   view_id,
   body,
@@ -2114,7 +2197,7 @@ pub fn create_view_query(
 
 /** Get view query results */
 pub fn get_view_query_results(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   view_id,
   query_id,
@@ -2155,7 +2238,7 @@ pub fn get_view_query_results(
 
 /** Delete a view query */
 pub fn delete_view_query(
-  harness: Harness,
+  harness: {clock: HarnessClock, net: HarnessNet},
   client: dict,
   view_id,
   query_id,
