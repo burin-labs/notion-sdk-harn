@@ -393,10 +393,7 @@ pub fn rate_limit_from_response(resp: dict) -> dict {
     limit: _header_ci(headers, "RateLimit-Limit")
       ?? _header_ci(headers, "X-RateLimit-Limit"),
     remaining: _header_ci(headers, "RateLimit-Remaining")
-      ?? _header_ci(
-      headers,
-      "X-RateLimit-Remaining",
-    ),
+      ?? _header_ci(headers, "X-RateLimit-Remaining"),
     reset: _header_ci(headers, "RateLimit-Reset")
       ?? _header_ci(headers, "X-RateLimit-Reset"),
   }
