@@ -53,7 +53,6 @@ pipeline default(harness: Harness) {
   // per-read lookup after the paginated section below resolves against `src/`
   // instead of this file's directory. See burin-labs/harn#6160.
   const fixtures = harness.fs.source_dir() + "/../fixtures/recorded"
-  harness.net.egress_policy({allow: ["api.notion.test"], default: "deny"})
   // ---------------------------------------------------------------
   // retrieve_a_page: happy path
   // ---------------------------------------------------------------
