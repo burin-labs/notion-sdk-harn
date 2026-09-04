@@ -4,7 +4,7 @@
 // HTTP envelope, so a thrown value carries neither the bearer header nor
 // oversize provider-side bodies. These tests pin that contract.
 import { decode_thrown, redact_response } from "../src/helpers"
-import { expect, expect_contains, expect_eq } from "./assertions"
+import { expect, expect_contains, expect_eq } from "../testdata/assertions"
 
 @test
 pipeline test_redacts_authorization_header(harness: Harness) {
