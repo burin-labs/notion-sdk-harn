@@ -18,7 +18,7 @@ import {
   post_database_query,
   retrieve_a_page,
 } from "../../src/lib"
-import { expect, expect_contains, expect_eq } from "../assertions"
+import { expect, expect_contains, expect_eq } from "../../testdata/assertions"
 
 const BASE_URL = "https://api.notion.test"
 
