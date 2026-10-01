@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   bump:
-    uses: burin-labs/harn/.github/workflows/bump-harn.yml@03c5a4ed916da34e50974890136c57c74f51cd52
+    uses: burin-labs/harn/.github/workflows/bump-harn.yml@4dba8de89a047c528dc64804914b1afeab79e6c2
     with:
       orchestration-sha: 03c5a4ed916da34e50974890136c57c74f51cd52
       version: ${{ inputs.version }}
