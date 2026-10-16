@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve structured Notion API errors on current Harn runtimes while
+  redacting sensitive response headers case-insensitively.
+
 ## [0.2.0] - 2026-08-03
 
 ### Changed

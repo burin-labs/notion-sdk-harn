@@ -37,7 +37,7 @@ pipeline test_redacts_other_sensitive_headers(harness: Harness) {
       Cookie: "session=abc",
       "Set-Cookie": "session=def; Path=/",
       "X-API-Key": "live_key",
-      "notion-token": "tok",
+      "NoTiOn-ToKeN": "tok",
       "X-Trace-Id": "trace-1",
     },
     body: "",
@@ -46,7 +46,7 @@ pipeline test_redacts_other_sensitive_headers(harness: Harness) {
   expect_eq(safe.headers["Cookie"], "[redacted]", "Cookie redacted")
   expect_eq(safe.headers["Set-Cookie"], "[redacted]", "Set-Cookie redacted")
   expect_eq(safe.headers["X-API-Key"], "[redacted]", "X-API-Key redacted")
-  expect_eq(safe.headers["notion-token"], "[redacted]", "Notion-Token redacted")
+  expect_eq(safe.headers["NoTiOn-ToKeN"], "[redacted]", "mixed-case Notion-Token redacted")
   expect_eq(safe.headers["X-Trace-Id"], "trace-1", "non-sensitive headers preserved")
   harness.stdio.println("redact other headers: ok")
 }

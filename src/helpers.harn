@@ -59,7 +59,7 @@ pub fn redact_response(resp: any) -> any {
 fn _strip_sensitive_headers(headers: dict) -> dict {
   let out = {}
   for entry in headers {
-    const key_lower = to_string(entry.key).to_lower()
+    const key_lower = to_string(entry.key).lower()
     if _SENSITIVE_HEADER_NAMES.contains(key_lower) {
       out = {...out, [entry.key]: "[redacted]"}
     } else {
