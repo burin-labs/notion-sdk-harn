@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Regenerate from the pinned Notion fixture using the current `harn-openapi`
+  generator, including its tool registry and schema catalog.
+- **Breaking.** `new_client` now takes scheme-keyed credentials. Pass
+  `{bearerAuth: {token: token}}` for REST calls and
+  `{basicAuth: {username: client_id, password: client_secret}}` for OAuth.
+  Nullable values and referenced fields now keep their declared types.
+
 ### Fixed
 
 - Preserve structured Notion API errors on current Harn runtimes while

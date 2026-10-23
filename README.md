@@ -39,59 +39,49 @@ run `harn install --locked`.
 
 ## Usage
 
+`new_client` takes a base URL, credentials keyed by security-scheme name, and
+extra headers. Use `bearerAuth` for an integration token and `basicAuth` with
+`username` and `password` for OAuth client credentials. Each operation takes
+the clock and network capabilities before the client.
+
 ```harn
 import {
-  get_users,
+  create_a_comment,
+  create_a_comment_variant1,
   new_client,
-  patch_page,
   post_database_query,
-  post_page,
   retrieve_a_page,
 } from "notion-sdk-harn/default"
-import { collect_all, decode_thrown, paginate } from "notion-sdk-harn/helpers"
+import { paginate } from "notion-sdk-harn/helpers"
 
-const client = new_client(
-  "https://api.notion.com",
-  env("NOTION_TOKEN"),
-  nil,
-  "",
-  "",
-  nil,
-  {"Notion-Version": "2022-06-28"},
-)
+pipeline example(harness: Harness) {
+  const authority = pick(harness, ["clock", "net"])
+  const client = new_client(
+    "https://api.notion.com",
+    {bearerAuth: {token: harness.env.get("NOTION_TOKEN") ?? ""}},
+    {"Notion-Version": "2022-06-28"},
+  )
+  const page = retrieve_a_page(authority, client, "abc123...")
+  harness.stdio.println(page.properties.Name.title[0].plain_text)
 
-// Retrieve a page
-const page = retrieve_a_page(client, "abc123...")
-println(page.properties.Name.title[0].plain_text)
+  const query: fn(dict) -> dict = fn(args: dict) {
+    return post_database_query(authority, client, "def456...", {
+      filter: {property: "Status", select: {equals: "Done"}}, ...args,
+    })
+  }
+  for row in paginate(query) {
+    harness.stdio.println(row.id)
+  }
 
-// Query a data source with auto-pagination (lazy stream)
-for row in paginate(
-  fn(args) {
-    return post_database_query(
-      client,
-      "def456...",
-      {filter: {property: "Status", select: {equals: "Done"}}, ...args},
-    )
-  },
-) {
-  println(row.id)
+  create_a_comment(
+    authority,
+    client,
+    create_a_comment_variant1(
+      {type: "page_id", page_id: "abc123..."},
+      [{type: "text", text: {content: "Hello from Harn!"}}],
+    ),
+  )
 }
-
-// Or collect every row eagerly
-const all_rows = collect_all(
-  fn(args) { return post_database_query(client, "def456...", args) },
-)
-
-// Create a comment using a typed variant constructor
-import { create_a_comment, create_a_comment_variant1 } from "notion-sdk-harn/default"
-
-create_a_comment(
-  client,
-  create_a_comment_variant1(
-    {type: "page_id", page_id: "abc123..."},
-    [{type: "text", text: {content: "Hello from Harn!"}}],
-  ),
-)
 ```
 
 ## Errors
@@ -102,7 +92,7 @@ and pass the `Err` value through `decode_thrown` to recover a structured error:
 ```harn
 import { decode_thrown } from "notion-sdk-harn/helpers"
 
-const result = try { retrieve_a_page(client, "missing") }
+const result = try { retrieve_a_page(authority, client, "missing") }
 if is_err(result) {
   const err = decode_thrown(unwrap_err(result))
   // err == {
@@ -174,8 +164,7 @@ different default through `extra_headers`:
 ```harn
 const client = new_client(
   "https://api.notion.com",
-  env("NOTION_TOKEN"),
-  nil, "", "", nil,
+  {bearerAuth: {token: harness.env.get("NOTION_TOKEN") ?? ""}},
   {"Notion-Version": "2022-06-28"},
 )
 ```
@@ -184,7 +173,7 @@ Generated operations also accept an optional trailing `notion_version`
 argument for one-off calls that need a newer dialect:
 
 ```harn
-const page = retrieve_a_page(client, "abc123...", nil, "2026-03-11")
+const page = retrieve_a_page(authority, client, "abc123...", nil, "2026-03-11")
 ```
 
 Notion guarantees backward compatibility within a major version per its
