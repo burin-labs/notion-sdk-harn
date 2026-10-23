@@ -2511,19 +2511,6 @@ fn _query_string(params: dict) -> string {
   return "?" + join(parts, "&")
 }
 
-fn _strip_codegen_variant(body: any) -> dict {
-  if type_of(body) != "dict" {
-    throw "polymorphic request body must be a dict with a _variant marker"
-  }
-  let out = {}
-  for entry in body {
-    if entry.key != "_variant" {
-      out = {...out, [entry.key]: entry.value}
-    }
-  }
-  return out
-}
-
 fn _security_available_retrieve_a_block(client: AdapterClient) -> bool {
   if _credential_available(client, "bearerAuth", "bearer") {
     return true
@@ -2654,18 +2641,7 @@ pub fn update_a_block(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  const body_variant = if type_of(body) == "dict" {
-    body.get("_variant")
-  } else {
-    nil
-  }
-  if body_variant == nil {
-    throw "update_a_block: polymorphic request body must be built with one of: update_a_block_variant1, update_a_block_variant2"
-  }
-  if !["Variant1", "Variant2"].contains(body_variant) {
-    throw "update_a_block: unknown request body variant " + to_string(body_variant)
-  }
-  const body_str = json_stringify(_strip_codegen_variant(body))
+  const body_str = json_stringify(body)
   const resp = connector_http_json(
     harness.clock,
     harness.net,
@@ -2686,13 +2662,13 @@ pub fn update_a_block(
 }
 
 /** Build a `Variant1` variant of the polymorphic request body. */
-pub fn update_a_block_variant1(payload: dict) -> dict {
-  return {...payload, _variant: "Variant1"}
+pub fn update_a_block_variant1(payload: any) -> any {
+  return payload
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn update_a_block_variant2(in_trash: any = nil) -> dict {
-  let body = {_variant: "Variant2"}
+  let body = {}
   if in_trash != nil {
     body = {...body, in_trash: in_trash}
   }
@@ -2901,18 +2877,7 @@ pub fn create_a_comment(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  const body_variant = if type_of(body) == "dict" {
-    body.get("_variant")
-  } else {
-    nil
-  }
-  if body_variant == nil {
-    throw "create_a_comment: polymorphic request body must be built with one of: create_a_comment_variant1, create_a_comment_variant2, create_a_comment_variant3, create_a_comment_variant4"
-  }
-  if !["Variant1", "Variant2", "Variant3", "Variant4"].contains(body_variant) {
-    throw "create_a_comment: unknown request body variant " + to_string(body_variant)
-  }
-  const body_str = json_stringify(_strip_codegen_variant(body))
+  const body_str = json_stringify(body)
   const resp = connector_http_json(
     harness.clock,
     harness.net,
@@ -2934,22 +2899,22 @@ pub fn create_a_comment(
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn create_a_comment_variant1(parent: any, rich_text: list) -> dict {
-  return {parent: parent, rich_text: rich_text, _variant: "Variant1"}
+  return {parent: parent, rich_text: rich_text}
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_comment_variant2(markdown: string, parent: any) -> dict {
-  return {markdown: markdown, parent: parent, _variant: "Variant2"}
+  return {markdown: markdown, parent: parent}
 }
 
 /** Build a `Variant3` variant of the polymorphic request body. */
 pub fn create_a_comment_variant3(discussion_id: string, rich_text: list) -> dict {
-  return {discussion_id: discussion_id, rich_text: rich_text, _variant: "Variant3"}
+  return {discussion_id: discussion_id, rich_text: rich_text}
 }
 
 /** Build a `Variant4` variant of the polymorphic request body. */
 pub fn create_a_comment_variant4(discussion_id: string, markdown: string) -> dict {
-  return {discussion_id: discussion_id, markdown: markdown, _variant: "Variant4"}
+  return {discussion_id: discussion_id, markdown: markdown}
 }
 
 fn _security_available_retrieve_comment(client: AdapterClient) -> bool {
@@ -3082,18 +3047,7 @@ pub fn update_a_comment(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  const body_variant = if type_of(body) == "dict" {
-    body.get("_variant")
-  } else {
-    nil
-  }
-  if body_variant == nil {
-    throw "update_a_comment: polymorphic request body must be built with one of: update_a_comment_variant1, update_a_comment_variant2"
-  }
-  if !["Variant1", "Variant2"].contains(body_variant) {
-    throw "update_a_comment: unknown request body variant " + to_string(body_variant)
-  }
-  const body_str = json_stringify(_strip_codegen_variant(body))
+  const body_str = json_stringify(body)
   const resp = connector_http_json(
     harness.clock,
     harness.net,
@@ -3115,12 +3069,12 @@ pub fn update_a_comment(
 
 /** Build a `Variant1` variant of the polymorphic request body. */
 pub fn update_a_comment_variant1(rich_text: list) -> dict {
-  return {rich_text: rich_text, _variant: "Variant1"}
+  return {rich_text: rich_text}
 }
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn update_a_comment_variant2(markdown: string) -> dict {
-  return {markdown: markdown, _variant: "Variant2"}
+  return {markdown: markdown}
 }
 
 fn _security_available_list_custom_emojis(client: AdapterClient) -> bool {
@@ -4023,18 +3977,7 @@ pub fn create_a_token(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  const body_variant = if type_of(body) == "dict" {
-    body.get("_variant")
-  } else {
-    nil
-  }
-  if body_variant == nil {
-    throw "create_a_token: polymorphic request body must be built with one of: create_a_token_variant1, create_a_token_variant2"
-  }
-  if !["Variant1", "Variant2"].contains(body_variant) {
-    throw "create_a_token: unknown request body variant " + to_string(body_variant)
-  }
-  const body_str = json_stringify(_strip_codegen_variant(body))
+  const body_str = json_stringify(body)
   const resp = connector_http_json(
     harness.clock,
     harness.net,
@@ -4064,7 +4007,7 @@ pub fn create_a_token_variant1(
   external_account: any = nil,
   redirect_uri: any = nil,
 ) -> dict {
-  let body = {code: code, grant_type: "authorization_code", _variant: "Variant1"}
+  let body = {code: code, grant_type: "authorization_code"}
   if external_account != nil {
     body = {...body, external_account: external_account}
   }
@@ -4076,7 +4019,7 @@ pub fn create_a_token_variant1(
 
 /** Build a `Variant2` variant of the polymorphic request body. */
 pub fn create_a_token_variant2(refresh_token: string) -> dict {
-  return {grant_type: "refresh_token", refresh_token: refresh_token, _variant: "Variant2"}
+  return {grant_type: "refresh_token", refresh_token: refresh_token}
 }
 
 fn _security_available_post_page(client: AdapterClient) -> bool {
@@ -4318,20 +4261,7 @@ pub fn update_page_markdown(
   if notion_version != nil {
     request_headers = {...request_headers, "Notion-Version": to_string(notion_version)}
   }
-  const body_variant = if type_of(body) == "dict" {
-    body.get("_variant")
-  } else {
-    nil
-  }
-  if body_variant == nil {
-    throw "update_page_markdown: polymorphic request body must be built with one of: update_page_markdown_insert_content, update_page_markdown_replace_content_range, update_page_markdown_update_content, update_page_markdown_replace_content"
-  }
-  if !["InsertContent", "ReplaceContentRange", "UpdateContent", "ReplaceContent"].contains(
-    body_variant,
-  ) {
-    throw "update_page_markdown: unknown request body variant " + to_string(body_variant)
-  }
-  const body_str = json_stringify(_strip_codegen_variant(body))
+  const body_str = json_stringify(body)
   const resp = connector_http_json(
     harness.clock,
     harness.net,
@@ -4357,26 +4287,22 @@ pub fn update_page_markdown(
 
 /** Build a `InsertContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_insert_content(insert_content: dict) -> dict {
-  return {insert_content: insert_content, type: "insert_content", _variant: "InsertContent"}
+  return {insert_content: insert_content, type: "insert_content"}
 }
 
 /** Build a `ReplaceContentRange` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content_range(replace_content_range: dict) -> dict {
-  return {
-    replace_content_range: replace_content_range,
-    type: "replace_content_range",
-    _variant: "ReplaceContentRange",
-  }
+  return {replace_content_range: replace_content_range, type: "replace_content_range"}
 }
 
 /** Build a `UpdateContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_update_content(update_content: dict) -> dict {
-  return {type: "update_content", update_content: update_content, _variant: "UpdateContent"}
+  return {type: "update_content", update_content: update_content}
 }
 
 /** Build a `ReplaceContent` variant of the polymorphic request body. */
 pub fn update_page_markdown_replace_content(replace_content: dict) -> dict {
-  return {replace_content: replace_content, type: "replace_content", _variant: "ReplaceContent"}
+  return {replace_content: replace_content, type: "replace_content"}
 }
 
 fn _security_available_move_page(client: AdapterClient) -> bool {

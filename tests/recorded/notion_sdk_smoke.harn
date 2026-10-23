@@ -33,7 +33,7 @@ const NOTION_VERSION = "2022-06-28"
  */
 type QueryRequestBody = {filter: {property: string}, start_cursor?: string}
 
-type CommentRequestBody = {parent: {page_id: string}, rich_text: list<dict>, _variant?: string}
+type CommentRequestBody = {parent: {page_id: string}, rich_text: list<dict>}
 
 type OauthIntrospectBody = {token: string}
 
@@ -314,7 +314,7 @@ pipeline default(harness: Harness) {
   const no_retry_calls = harness.testing.http_mock_calls()
   expect_eq(len(no_retry_calls), 1, "write without idempotency is not retried")
   // ---------------------------------------------------------------
-  // comments.create: variant1 (parent + rich_text)
+  // comments.create: direct wire body (parent + rich_text)
   // ---------------------------------------------------------------
   harness.testing.http_mock_clear()
   harness.testing.http_mock(
@@ -326,9 +326,14 @@ pipeline default(harness: Harness) {
       headers: {"x-request-id": "req-comment"},
     },
   )
-  const body = create_a_comment_variant1(
-    {type: "page_id", page_id: page_id},
-    [{type: "text", text: {content: "Hello from notion-sdk-harn"}}],
+  const body = {
+    parent: {type: "page_id", page_id: page_id},
+    rich_text: [{type: "text", text: {content: "Hello from notion-sdk-harn"}}],
+  }
+  expect_eq(
+    create_a_comment_variant1(body.parent, body.rich_text),
+    body,
+    "constructor returns wire body",
   )
   const comment = create_a_comment(pick(harness, ["clock", "net"]), client, body)
   expect_eq(comment.object, "comment", "comment object kind")
@@ -338,7 +343,7 @@ pipeline default(harness: Harness) {
   const comment_body: CommentRequestBody = json_parse(comment_calls[0].body)
   expect_eq(comment_body.parent.page_id, page_id, "comment parent forwarded")
   expect_eq(len(comment_body.rich_text), 1, "rich_text array forwarded")
-  expect_eq(comment_body._variant, nil, "internal _variant marker stripped before send")
+  expect_eq(comment_body, body, "comment body forwarded unchanged")
   // ---------------------------------------------------------------
   // oauth.introspect: Basic auth provider, not Bearer auth
   // ---------------------------------------------------------------
