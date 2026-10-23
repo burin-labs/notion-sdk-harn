@@ -38,7 +38,15 @@ type CommentRequestBody = {parent: {page_id: string}, rich_text: list<dict>, _va
 type OauthIntrospectBody = {token: string}
 
 fn fixture_client() {
-  return new_client(BASE_URL, TOKEN, nil, "", "", nil, {"Notion-Version": NOTION_VERSION})
+  return new_client(BASE_URL, {bearerAuth: {token: TOKEN}}, {"Notion-Version": NOTION_VERSION})
+}
+
+fn provider_token() -> string {
+  return "provider_test_token"
+}
+
+fn provider_basic() -> {username: string, password: string} {
+  return {username: "client-id", password: "client-secret"}
 }
 
 /** Read a recorded fixture body by basename from an already-resolved directory. */
@@ -114,11 +122,7 @@ pipeline default(harness: Harness) {
   )
   const provider_client = new_client(
     BASE_URL + "/",
-    "",
-    fn() { return "provider_test_token" },
-    "",
-    "",
-    nil,
+    {bearerAuth: {token_provider: provider_token}},
     {"Notion-Version": NOTION_VERSION},
   )
   const provider_page = retrieve_a_page(
@@ -350,11 +354,7 @@ pipeline default(harness: Harness) {
   )
   const oauth_client = new_client(
     BASE_URL,
-    "ignored-bearer-token",
-    nil,
-    "",
-    "",
-    fn() { return {user: "client-id", password: "client-secret"} },
+    {bearerAuth: {token: "ignored-bearer-token"}, basicAuth: {basic_provider: provider_basic}},
     {"Notion-Version": NOTION_VERSION},
   )
   const token_state = introspect_token(
