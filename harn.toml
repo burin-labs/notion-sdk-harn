@@ -5,14 +5,15 @@ description = "Typed Notion REST API SDK in pure Harn, generated via harn-openap
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/burin-labs/notion-sdk-harn"
 docs_url = "https://github.com/burin-labs/notion-sdk-harn#readme"
-harn = ">=0.10.135,<0.11"
+harn = ">=0.10.200,<0.11"
 
 [exports]
 default = "src/lib.harn"
 helpers = "src/helpers.harn"
+entrypoint = "src/main.harn"
 
 # Publishable dependencies must be git-backed so this package resolves from a
 # clean consumer project without a sibling checkout. Pin exact revisions for
 # reproducible codegen refreshes and package installs.
 [dependencies]
-harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "9eef85260b38d3dfd17e0f75837585134b3061cc" }
+harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "908ca98a35224cb3d9cc3f5c3999f03a8309afc1" }
