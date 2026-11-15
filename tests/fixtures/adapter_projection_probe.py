@@ -9,6 +9,11 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
+
+
+STARTUP_TIMEOUT_SECONDS = 90
+REQUEST_TIMEOUT_SECONDS = 30
 
 
 class Mcp:
@@ -41,11 +46,11 @@ class Mcp:
         self.process.stdin.write(json.dumps(message) + "\n")
         self.process.stdin.flush()
 
-    def call(self, method, params):
+    def call(self, method, params, timeout=REQUEST_TIMEOUT_SECONDS):
         self.next_id += 1
         self.send(method, params, self.next_id)
         while True:
-            message = self.messages.get(timeout=30)
+            message = self.messages.get(timeout=timeout)
             assert message is not None and not isinstance(message, Exception), (method, message, self.errors)
             if "id" in message:
                 assert message["id"] == self.next_id, message
@@ -96,9 +101,16 @@ def probe(binary, root):
         "NOTION_BASICAUTH_PASSWORD": "fixture-password",
     }
     entrypoint = root / "src/main.harn"
+    phases = []
+
+    def invoke(*args, env=environment):
+        started = time.monotonic()
+        result = subprocess.run([binary, *map(str, args)], env=env, capture_output=True, text=True, timeout=STARTUP_TIMEOUT_SECONDS)
+        phases.append({"command": list(map(str, args)), "seconds": round(time.monotonic() - started, 3), "exit_code": result.returncode})
+        return result
 
     def command(*args, env=environment):
-        result = subprocess.run([binary, *map(str, args)], env=env, capture_output=True, text=True, timeout=30)
+        result = invoke(*args, env=env)
         assert result.returncode == 0, (args, result.stdout, result.stderr)
         return result.stdout
 
@@ -116,16 +128,33 @@ def probe(binary, root):
         observed = {(tool["source"]["id"], tool["source"]["binding"]["method"], tool["source"]["binding"]["path"]) for tool in tools}
         assert len(tools) == len(expected) == 46 and observed == expected
         parents = {tuple(tool["cli"]["command"][:-1]) for tool in tools}
-        for parent in parents:
-            help_text = command("tool", "run", entrypoint, *parent, "--help")
-            for tool in tools:
-                path = tool["cli"]["command"]
-                if tuple(path[:-1]) == parent:
-                    assert path[-1] in help_text, (path, help_text)
+        completions = command("tool", "completions", entrypoint, "--shell", "bash")
+        with tempfile.TemporaryDirectory(prefix="notion-adapter-completion-") as temporary:
+            completion_path = pathlib.Path(temporary) / "notion.bash"
+            completion_path.write_text(completions)
+            runner = pathlib.Path(temporary) / "complete.bash"
+            runner.write_text('''set -euo pipefail
+source "$1"
+shift
+COMP_WORDS=("$@")
+COMP_CWORD=$(($# - 1))
+_notion "${COMP_WORDS[0]}" "" "${COMP_WORDS[$((COMP_CWORD - 1))]}"
+printf '%s\\n' "${COMPREPLY[@]}"
+''')
+            for parent in sorted(parents):
+                completed = subprocess.run(["bash", "--noprofile", "--norc", str(runner), str(completion_path), "notion", *parent, ""], capture_output=True, text=True, timeout=REQUEST_TIMEOUT_SECONDS)
+                assert completed.returncode == 0, completed.stderr
+                names = {line for line in completed.stdout.splitlines() if not line.startswith("-") and line != "help"}
+                expected_names = {tool["cli"]["command"][-1] for tool in tools if tuple(tool["cli"]["command"][:-1]) == parent}
+                assert names == expected_names, (parent, names, expected_names)
+        help_text = command("tool", "run", entrypoint, "pages", "retrieve_a_page", "--help")
+        assert "--page-id" in help_text, help_text
         assert not records, "publication and help must not make HTTP requests"
 
         mcp = Mcp(binary, entrypoint, environment)
-        initialized = mcp.call("initialize", {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "notion-probe", "version": "1"}})
+        started = time.monotonic()
+        initialized = mcp.call("initialize", {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "notion-probe", "version": "1"}}, timeout=STARTUP_TIMEOUT_SECONDS)
+        phases.append({"command": ["mcp", "initialize"], "seconds": round(time.monotonic() - started, 3)})
         assert "result" in initialized, initialized
         mcp.send("notifications/initialized", {})
         listed = mcp.call("tools/list", {})
@@ -150,7 +179,7 @@ def probe(binary, root):
                 assert record["headers"]["notion-version"] == "2022-06-28"
 
             input_path.write_text("{}")
-            refused = subprocess.run([binary, "tool", "run", str(entrypoint), "pages", "retrieve_a_page", "--harn-input", "@" + str(input_path), "--json"], env=environment, capture_output=True, text=True, timeout=30)
+            refused = invoke("tool", "run", entrypoint, "pages", "retrieve_a_page", "--harn-input", "@" + str(input_path), "--json")
             assert refused.returncode != 0
             rejected = mcp.call("tools/call", {"name": "retrieve_a_page", "arguments": {}})
             assert "error" in rejected or rejected["result"].get("isError"), rejected
@@ -160,14 +189,14 @@ def probe(binary, root):
             # Keep its extra/missing fields as a real response-validation negative.
             response_body[0] = legacy_page
             input_path.write_text(json.dumps({"page_id": page_id}))
-            refused = subprocess.run([binary, "tool", "run", str(entrypoint), "pages", "retrieve_a_page", "--harn-input", "@" + str(input_path), "--json"], env=environment, capture_output=True, text=True, timeout=30)
+            refused = invoke("tool", "run", entrypoint, "pages", "retrieve_a_page", "--harn-input", "@" + str(input_path), "--json")
             assert refused.returncode != 0 and "output violates its declared schema" in refused.stderr
             rejected = mcp.call("tools/call", {"name": "retrieve_a_page", "arguments": {"page_id": page_id}})
             assert "error" in rejected or rejected["result"].get("isError"), rejected
             assert len(records) == 4, "both invalid responses must reach HTTP and refuse"
 
         missing = {**environment, "NOTION_BASICAUTH_PASSWORD": ""}
-        refused = subprocess.run([binary, "tool", "schema", str(entrypoint)], env=missing, capture_output=True, text=True, timeout=30)
+        refused = invoke("tool", "schema", entrypoint, env=missing)
         assert refused.returncode != 0
         assert "fixture-bearer-token" not in refused.stdout + refused.stderr
         assert "fixture-password" not in refused.stdout + refused.stderr
@@ -181,7 +210,7 @@ def probe(binary, root):
             server.server_close()
             server_thread.join(timeout=10)
             assert not server_thread.is_alive()
-    print(json.dumps({"operations": 46, "cli_help_groups": len(parents), "reached": {"cli": 1, "mcp": 1}, "pre_request_refusals": {"cli": 1, "mcp": 1}, "response_refusals": {"cli": 1, "mcp": 1}, "credential_refusals": 1, "http_requests": len(records), "pending": 0}))
+    print(json.dumps({"operations": 46, "cli_completion_groups": len(parents), "cli_help_operations": 1, "reached": {"cli": 1, "mcp": 1}, "pre_request_refusals": {"cli": 1, "mcp": 1}, "response_refusals": {"cli": 1, "mcp": 1}, "credential_refusals": 1, "http_requests": len(records), "phases": phases, "pending": 0}))
 
 
 if __name__ == "__main__":
