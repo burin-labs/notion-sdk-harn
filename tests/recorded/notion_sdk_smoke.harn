@@ -6,6 +6,8 @@
 // `decode_thrown`. No live HTTP traffic.
 import { collect_all, decode_thrown, paginate } from "../../src/helpers"
 import {
+  AdapterClient,
+  AdapterCredential,
   create_a_comment,
   create_a_comment_variant1,
   get_users,
@@ -37,8 +39,9 @@ type CommentRequestBody = {parent: {page_id: string}, rich_text: list<dict>}
 
 type OauthIntrospectBody = {token: string}
 
-fn fixture_client() {
-  return new_client(BASE_URL, {bearerAuth: {token: TOKEN}}, {"Notion-Version": NOTION_VERSION})
+fn fixture_client() -> AdapterClient {
+  const credentials: dict<string, AdapterCredential> = {bearerAuth: {token: TOKEN}}
+  return new_client(BASE_URL, credentials, {"Notion-Version": NOTION_VERSION})
 }
 
 fn provider_token() -> string {

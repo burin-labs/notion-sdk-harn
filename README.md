@@ -46,6 +46,7 @@ the clock and network capabilities before the client.
 
 ```harn
 import {
+  AdapterCredential,
   create_a_comment,
   create_a_comment_variant1,
   new_client,
@@ -56,9 +57,12 @@ import { paginate } from "notion-sdk-harn/helpers"
 
 pipeline example(harness: Harness) {
   const authority = pick(harness, ["clock", "net"])
+  const credentials: dict<string, AdapterCredential> = {
+    bearerAuth: {token: harness.env.get("NOTION_BEARERAUTH_TOKEN") ?? ""},
+  }
   const client = new_client(
     "https://api.notion.com",
-    {bearerAuth: {token: harness.env.get("NOTION_TOKEN") ?? ""}},
+    credentials,
     {"Notion-Version": "2022-06-28"},
   )
   const page = retrieve_a_page(authority, client, "abc123...")
@@ -83,6 +87,16 @@ pipeline example(harness: Harness) {
   )
 }
 ```
+
+## CLI and MCP
+
+The generated `src/main.harn` entrypoint publishes the same 46 operations as
+the SDK. It uses the SDK's registry, credentials, request validation and HTTP
+policy for both surfaces.
+
+- [Configure the adapter credentials](docs/configure-adapter.md).
+- [Run a Notion command](docs/run-adapter-cli.md).
+- [Serve Notion over MCP](docs/serve-adapter-mcp.md).
 
 ## Errors
 
@@ -164,7 +178,7 @@ different default through `extra_headers`:
 ```harn
 const client = new_client(
   "https://api.notion.com",
-  {bearerAuth: {token: harness.env.get("NOTION_TOKEN") ?? ""}},
+  {bearerAuth: {token: harness.env.get("NOTION_BEARERAUTH_TOKEN") ?? ""}},
   {"Notion-Version": "2022-06-28"},
 )
 ```
@@ -191,11 +205,14 @@ harn run scripts/regen.harn -- --apply
 harn run scripts/check_generated_provenance.harn
 ```
 
-This reads the pinned `tests/fixtures/notion.openapi.json` and rewrites
-`src/lib.harn` via [harn-openapi](https://github.com/burin-labs/harn-openapi).
+This reads the pinned `tests/fixtures/notion.openapi.json` and generates
+`src/lib.harn` and `src/main.harn` through
+[harn-openapi](https://github.com/burin-labs/harn-openapi). Generation applies
+the canonical Harn linter's safe fixes and formatter, with no Notion-specific
+source rewrite or response-redaction implementation.
 The current generator ref is the `harn-openapi` revision pinned in
 `harn.toml` and `harn.lock`. Apply mode also rewrites
-`src/lib.harn.provenance.toml`; the second command is CI's fast, fail-closed
+both `.provenance.toml` receipts; the second command is CI's fast, fail-closed
 check of the fixture hash, locked generator commit, regeneration-program hash,
 and generated-output hash. Changing any semantic input requires one explicit
 regeneration instead of rerunning unchanged million-byte codegen on every PR.

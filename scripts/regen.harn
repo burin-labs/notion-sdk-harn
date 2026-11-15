@@ -4,144 +4,66 @@ import {
   verify_generated_provenance,
   write_generated_provenance,
 } from "./lib/generated_provenance"
-// Regenerate the SDK from the pinned Notion OpenAPI fixture.
-//
-// Reads the pinned Notion OpenAPI fixture, runs it through the
-// harn-openapi parser + codegen, and either writes the result to
-// `src/lib.harn` (when invoked with `--apply`) or verifies the
-// committed output has not drifted.
-//
-// Usage:
-//
-//   harn run scripts/regen.harn              # verify mode (read-only)
-//   harn run scripts/regen.harn -- --apply   # write mode
-//
-// The harn-openapi dependency is resolved via `[dependencies]` in
-// `harn.toml`. Run `harn install --locked` once before first use.
-import { codegen_module, operations, parse } from "harn-openapi/default"
+import { codegen_entrypoint, codegen_module, operations, parse } from "harn-openapi/default"
 
-const FIXTURE_PATH = "tests/fixtures/notion.openapi.json"
+type GeneratedFile = {path: string, source: string}
 
-const OUTPUT_PATH = "src/lib.harn"
-
-const PROVENANCE_PATH = "src/lib.harn.provenance.toml"
-
-type ProcessResult = {success: bool, stderr: string}
-
-const CODEGEN_OPTIONS = {
+const OPTIONS = {
   module_name: "notion",
   client_name: "NotionClient",
+  environment_prefix: "NOTION",
   transport: "connector_policy",
   default_base_url: "https://api.notion.com",
   header_overrides: {"Notion-Version": "2022-06-28"},
 }
 
-fn _harn_bin(env: HarnessEnv) -> string {
-  const bin = env.get("HARN_BIN")
-  if bin != nil && bin != "" {
-    return bin
-  }
-  return "harn"
-}
-
-/**
- * Run a pinned Harn subcommand against a generated file.
- *
- * The parent script stays under the default worktree sandbox. Linux Landlock
- * rejects a nested Harn invocation when the parent also tries to wrap it, so
- * promote only the checksum-pinned subprocess.
- */
-fn _run_harn_on(harness: Harness, args: list<string>, failure: string) -> nil {
-  const result: ProcessResult = harness.process.run(
-    {program: _harn_bin(harness.env), args: args, cwd: ".", sandbox_profile: "unrestricted"},
-  )
-  if !result.success {
-    if result.stderr != "" {
-      harness.stdio.println(result.stderr.trim())
-    }
-    throw failure
-  }
-  return nil
-}
-
-/**
- * Normalize codegen output the same way a handwritten source would be
- * normalized. The package contract runs `harn lint` in strict mode, where a
- * warning is fatal, so the behavior-preserving repairs have to be part of
- * generation rather than a manual edit the next regen would revert.
- */
-fn _format_generated(harness: Harness, source: string) -> string {
-  const dir = ".harn-runs/regen"
-  harness.fs.mkdir(dir)
-  const path = dir + "/notion-sdk-harn-generated.harn"
+fn canonical_source(harness: Harness, source: string) -> string {
+  const root = harness.fs.mkdtemp_in_workspace("notion-generated-source-")
+  const path = "${root}/generated.harn"
   harness.fs.write_text(path, source)
-  _run_harn_on(harness, ["lint", "--fix", path], "failed to lint generated output")
-  _run_harn_on(harness, ["fmt", path], "failed to format generated output")
-  const formatted = harness.fs.read_text(path)
+  for args in [["lint", "--fix", path], ["fmt", path], ["lint", "--strict", path]] {
+    const result = harness.process.run(
+      {
+        program: harness.env.get("HARN_BIN") ?? "harn",
+        args: args,
+        sandbox_profile: "workspace_paths",
+      },
+    )
+    require result.success,
+      "generated source normalization failed: ${result.stderr}\n${result.stdout}"
+  }
+  const normalized = harness.fs.read_text(path)
   harness.fs.delete(path)
-  return formatted
+  return normalized
 }
 
-/** Keep provider response values behind the SDK's redacted error boundary. */
-fn _apply_redact_response_patch(source: string) -> string {
-  const patched = replace(source, "    throw resp\n", "    throw redact_response(resp)\n")
-  return "import { redact_response } from \"./helpers\"\n${patched}"
-}
-
-pipeline default(harness: Harness) {
-  const apply_mode = argv.contains("--apply")
-  const raw = harness.fs.read_text(FIXTURE_PATH)
-  const doc = parse(raw)
-  const ops = operations(doc)
-  const schema_count = if doc.components != nil && doc.components.schemas != nil {
-    len(doc.components.schemas)
-  } else {
-    0
-  }
-  harness.stdio.println("parsed ${doc.info.title} (OpenAPI ${doc.openapi})")
-  harness.stdio.println("  operations: ${len(ops)}")
-  harness.stdio.println("  schemas:    ${schema_count}")
-  const raw_generated = codegen_module(harness.fs, doc, CODEGEN_OPTIONS)
-  const patched = _apply_redact_response_patch(raw_generated)
-  const generated = _format_generated(harness, patched)
-  const generated_lines = len(split(generated, "\n"))
-  harness.stdio.println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
-  const current = if harness.fs.exists(OUTPUT_PATH) {
-    harness.fs.read_text(OUTPUT_PATH)
-  } else {
-    ""
-  }
-  if apply_mode {
-    harness.fs.write_text(OUTPUT_PATH, generated)
-    write_generated_provenance(
-      harness.fs,
-      PROVENANCE_PATH,
-      build_generated_provenance(harness.fs, generated),
-    )
-    harness.stdio.println("wrote ${OUTPUT_PATH} (${len(generated)} bytes)")
-    if current == "" {
-      harness.stdio.println("  (was empty)")
-    } else if current == generated {
-      harness.stdio.println("  (no change)")
+fn main(harness: Harness) {
+  const doc = parse(harness.fs.read_text("tests/fixtures/notion.openapi.json"))
+  const files: list<GeneratedFile> = [
+    {path: "src/lib.harn", source: codegen_module(harness.fs, doc, OPTIONS)},
+    {
+      path: "src/main.harn",
+      source: codegen_entrypoint(
+        harness.fs,
+        doc,
+        {module_import: "./lib", environment_prefix: OPTIONS.environment_prefix},
+      ),
+    },
+  ]
+  harness.stdio.println("generated ${len(operations(doc))} Notion operations")
+  for file in files {
+    const receipt = "${file.path}.provenance.toml"
+    const source = canonical_source(harness, file.source)
+    const expected = build_generated_provenance(harness.fs, source)
+    if argv.contains("--apply") {
+      harness.fs.write_text(file.path, source)
+      write_generated_provenance(harness.fs, receipt, expected)
+      harness.stdio.println("wrote ${file.path}")
     } else {
-      harness.stdio.println("  (replaced ${len(current)} bytes -> ${len(generated)} bytes)")
+      require harness.fs.read_text(file.path) == source,
+        "generated output is stale: ${file.path}; run harn run scripts/regen.harn -- --apply"
+      verify_generated_provenance(read_generated_provenance(harness.fs, receipt), expected)
+      harness.stdio.println("${file.path} is current")
     }
-  } else if current == generated {
-    verify_generated_provenance(
-      read_generated_provenance(harness.fs, PROVENANCE_PATH),
-      build_generated_provenance(harness.fs, generated),
-    )
-    harness.stdio.println("${OUTPUT_PATH} is up to date.")
-  } else if current == "" {
-    harness.stdio.println("${OUTPUT_PATH} does not exist yet.")
-    harness.stdio.println("Run `harn run scripts/regen.harn -- --apply` to write it.")
-    throw "generated SDK output is missing"
-  } else {
-    const current_lines = len(split(current, "\n"))
-    harness.stdio.println("${OUTPUT_PATH} differs from generator output:")
-    harness.stdio.println("  current:    ${len(current)} bytes, ${current_lines} lines")
-    harness.stdio.println("  generated:  ${len(generated)} bytes, ${generated_lines} lines")
-    harness.stdio.println("Run `harn run scripts/regen.harn -- --apply` to update it.")
-    throw "generated SDK output is stale"
   }
 }

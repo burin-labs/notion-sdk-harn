@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- One generated executable entrypoint for all 46 Notion operations over CLI
+  and MCP, packaged as the `entrypoint` export with its own provenance receipt.
+
 ### Changed
+
+- Require Harn 0.10.200 and use the generated typed credential and operation
+  registry contracts. Remove the Notion-specific generated-source rewrite and
+  `redact_response` helper; the shared connector transport owns safe errors.
 
 - Regenerate from the pinned Notion fixture using the current `harn-openapi`
   generator, including its tool registry and schema catalog.
