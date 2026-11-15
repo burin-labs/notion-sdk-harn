@@ -51,10 +51,10 @@ jobs:
               extra_headers: {},
             }
             const registry = adapter_registry(pick(harness, ["clock", "net"]), config)
-            assert_eq(len(registry.tools), 46)
-            let _ = new_client
-            let _decode = decode_thrown
-            let _paginate = paginate
+            require len(registry.tools) == 46, "installed adapter lost operations"
+            const _ = new_client
+            const _ = decode_thrown
+            const _ = paginate
           }
           EOF
           harn check smoke.harn
