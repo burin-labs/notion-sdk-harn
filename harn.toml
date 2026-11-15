@@ -16,4 +16,4 @@ entrypoint = "src/main.harn"
 # clean consumer project without a sibling checkout. Pin exact revisions for
 # reproducible codegen refreshes and package installs.
 [dependencies]
-harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "d612ce7025ef3e680f183c398523195f4ebbdb43" }
+harn-openapi = { git = "https://github.com/burin-labs/harn-openapi", rev = "908ca98a35224cb3d9cc3f5c3999f03a8309afc1" }
